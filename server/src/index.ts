@@ -1,6 +1,6 @@
 import express from "express";
 import "./lib/mongoDB";
-import boxRoutefrom "./routes/box";
+import boxRoute from "./routes/box";
 import authRoute from "./routes/login";
 import passport from "passport";
 
