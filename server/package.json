@@ -1,0 +1,54 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Loki-box server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rm -rf ./build && tsc",
+    "start": "npm run build && node -r dotenv/config build/index.js",
+    "start:dev": "nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noll115/loki-box.git"
+  },
+  "keywords": [
+    "loki",
+    "box",
+    "arduino",
+    "react-native"
+  ],
+  "author": "Noel Gomez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/noll115/loki-box/issues"
+  },
+  "homepage": "https://github.com/noll115/loki-box#readme",
+  "dependencies": {
+    "@typegoose/typegoose": "^7.3.2",
+    "@types/bcrypt": "^3.0.0",
+    "@types/express": "^4.17.7",
+    "@types/mongoose": "^5.7.36",
+    "@types/node": "^14.0.27",
+    "@types/passport": "^1.0.4",
+    "@types/passport-jwt": "^3.0.3",
+    "@types/passport-local": "^1.0.33",
+    "bcrypt": "^5.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "helmet": "^4.1.0",
+    "joi": "^17.2.0",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.10.0",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.4",
+    "passport": "^0.4.1",
+    "passport-jwt": "^4.0.0",
+    "passport-local": "^1.0.0",
+    "socket.io": "^2.3.0",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7"
+  }
+}
