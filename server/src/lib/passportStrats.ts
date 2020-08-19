@@ -6,7 +6,6 @@ import { User } from "./mongoDB";
 
 const options: StrategyOptions = {
     jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-    issuer: "loki-box",
     secretOrKey: process.env.SECRET,
     ignoreExpiration: true,
     algorithms: ["HS256"]
@@ -29,7 +28,7 @@ export default (passport: PassportStatic) => {
             });
             return done(null, user);
         } catch (err) {
-            return done(err);
+            return done(err)
         }
     }))
 
@@ -39,8 +38,13 @@ export default (passport: PassportStatic) => {
     }, async (email, password, done) => {
         try {
             let user = await User.findOne({ email });
-            if (!user) return done(null, false, { message: "User not found" });
-            if (!user.ValidPassword(password)) return done(null, false, { message: "Wrong password!" });
+            if (!user) {
+                return done(null, false, { message: "User not found" });
+            }
+
+            if (!(await user.ValidPassword(password))) {
+                return done(null, false, { message: "Wrong password!" });
+            }
             return done(null, user);
         } catch (err) {
             return done(err);

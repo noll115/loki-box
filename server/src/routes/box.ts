@@ -5,8 +5,9 @@ let router = Router();
 
 export default (passport: PassportStatic) => {
 
-    router.post("/", (req, res) => {
-
+    router.get("/", passport.authenticate("jwt", { session: false }), (req, res) => {
+        console.log("hello");
+        res.send(req.user)
     })
 
     return router;

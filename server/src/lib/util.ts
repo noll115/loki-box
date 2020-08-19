@@ -1,5 +1,4 @@
-import { pbkdf2, randomBytes } from "crypto";
-import { compare, genSalt, hash } from "bcrypt";
+import { compare, hash } from "bcrypt";
 
 
 
