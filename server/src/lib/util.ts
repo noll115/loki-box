@@ -3,15 +3,22 @@ import { compare, hash } from "bcrypt";
 
 
 async function ValidatePass(pass: string, hash: string) {
-    let verified = await compare(pass, hash)
-    return verified;
+    return await compare(pass, hash);
+
 }
-
-
 
 async function HashPass(pass: string) {
-    let passHash = await hash(pass, 10);
-    return passHash;
+    return await hash(pass, 10);
+
 }
 
-export { ValidatePass, HashPass }
+async function ValidateSecret(secret: string, hash: string) {
+    return await compare(secret, hash);
+}
+
+async function HashSecret(secret: string) {
+    return await hash(secret, 6);
+}
+
+
+export { ValidatePass, HashPass, HashSecret, ValidateSecret }

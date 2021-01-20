@@ -19,6 +19,12 @@
     "ios": {
       "supportsTablet": true
     },
+    "android": {
+      "softwareKeyboardLayoutMode": "pan",
+      "permissions": [
+        "CAMERA"
+      ]
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     }

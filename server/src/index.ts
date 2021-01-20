@@ -1,30 +1,35 @@
 import express, { ErrorRequestHandler } from "express";
 import "./lib/mongoDB";
 import boxRoute from "./routes/box";
-import authRoute from "./routes/auth";
-import passport from "passport";
-import SetUpStrategies from "./lib/passportStrats";
-
+import passport from "./lib/passport";
+import userRoute from "./routes/user";
+import { HttpException } from "./types/general";
+import { Server } from 'socket.io'
 
 
 const app = express();
-SetUpStrategies(passport);
+const server = require('http').createServer(app);
+server.listen(process.env.PORT, () => {
+    console.log(`Listening on ${process.env.PORT}`);
+})
+let io = new Server(server, { serveClient: false });
+let userNsp = io.of("/user");
+let boxNsp = io.of("/box");
 
-app.use(express.urlencoded({ extended: false }))
+app.use(express.json())
 app.use(passport.initialize())
 
-app.use("/auth", authRoute(passport));
-app.use("/box", boxRoute(passport));
+app.use("/user", userRoute(passport, userNsp, boxNsp));
+app.use("/box", boxRoute(passport, boxNsp, userNsp));
 
-let ErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
+
+let ErrorHandler: ErrorRequestHandler = (err: HttpException, req, res, next) => {
     console.log(err);
-    res.status(500).send("Something went wrong!");
+    let status = err.status || 500;
+    let msg = err.message || "Something went wrong!";
+    res.status(status).send(msg);
 }
 
 
 app.use(ErrorHandler)
 
-
-app.listen(process.env.PORT, () => {
-    console.log(`Listening on ${process.env.PORT}`);
-})
