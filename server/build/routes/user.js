@@ -14,7 +14,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -63,7 +63,7 @@ var mongoDB_1 = require("../lib/mongoDB");
 var general_1 = require("../types/general");
 var jwt = __importStar(require("jsonwebtoken"));
 var admin_1 = __importDefault(require("./admin"));
-var socketio_jwt_1 = __importDefault(require("socketio-jwt"));
+var passport_1 = require("../lib/passport");
 exports.default = (function (passport, userNsp, boxNsp) {
     var router = express_1.Router();
     router.post("/register", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
@@ -98,99 +98,88 @@ exports.default = (function (passport, userNsp, boxNsp) {
         var jwtToken = jwt.sign(userData, process.env.USER_SECRET);
         return res.send({ jwtToken: jwtToken });
     });
-    userNsp.use(socketio_jwt_1.default.authorize({
-        secret: process.env.USER_SECRET,
-        handshake: true,
-        auth_header_required: true
-    }));
+    userNsp.use(passport_1.SocketVerifyUserJWT);
     userNsp.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0, function () {
-        var userSocket, id, user;
         return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    userSocket = socket;
-                    id = userSocket.decoded_token.user.id;
-                    return [4 /*yield*/, mongoDB_1.User.findById(id)];
-                case 1:
-                    user = _a.sent();
-                    if (user) {
-                        console.log(id);
-                        userSocket.user = user;
-                    }
-                    else {
-                        return [2 /*return*/, socket.disconnect()];
-                    }
-                    socket.on("registerBox", function (_a, cb) {
-                        var boxID = _a.boxID, boxName = _a.boxName, seenAs = _a.seenAs;
-                        return __awaiter(void 0, void 0, void 0, function () {
-                            var box, _b;
-                            return __generator(this, function (_c) {
-                                switch (_c.label) {
-                                    case 0: return [4 /*yield*/, mongoDB_1.Box.findById(boxID)];
-                                    case 1:
-                                        box = _c.sent();
-                                        if (!box) return [3 /*break*/, 3];
-                                        _b = userSocket;
-                                        return [4 /*yield*/, userSocket.user.AddBox({ box: box._id, boxName: boxName, seenAs: seenAs })];
-                                    case 2:
-                                        _b.user = _c.sent();
-                                        console.log(userSocket.user);
-                                        cb({ status: "ok" });
-                                        return [3 /*break*/, 4];
-                                    case 3:
-                                        cb({ status: "failed" });
-                                        _c.label = 4;
-                                    case 4: return [2 /*return*/];
-                                }
-                            });
-                        });
-                    });
-                    socket.on("sendMsg", function (boxID, msg, cb) { return __awaiter(void 0, void 0, void 0, function () {
-                        var boxes, hasBox, box, status_1;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    boxes = userSocket.user.boxes;
-                                    hasBox = boxes.findIndex(function (val) {
-                                        return val.box.toHexString() === boxID;
-                                    });
-                                    if (!(hasBox !== -1)) return [3 /*break*/, 2];
-                                    return [4 /*yield*/, mongoDB_1.Box.findById(boxID)];
-                                case 1:
-                                    box = _a.sent();
-                                    if (box) {
-                                        status_1 = box.SendMsg(msg, boxNsp);
-                                        return [2 /*return*/, cb(status_1)];
-                                    }
-                                    _a.label = 2;
-                                case 2:
-                                    cb({ status: "box not found" });
-                                    return [2 /*return*/];
-                            }
-                        });
-                    }); });
-                    socket.on("removeBox", function (boxID, cb) { return __awaiter(void 0, void 0, void 0, function () {
-                        var _a, err_1;
-                        return __generator(this, function (_b) {
-                            switch (_b.label) {
-                                case 0:
-                                    _b.trys.push([0, 2, , 3]);
-                                    _a = userSocket;
-                                    return [4 /*yield*/, userSocket.user.RemoveBox(boxID)];
-                                case 1:
-                                    _a.user = _b.sent();
-                                    cb({ status: "ok" });
-                                    return [3 /*break*/, 3];
-                                case 2:
-                                    err_1 = _b.sent();
-                                    cb({ status: "failed" });
-                                    return [3 /*break*/, 3];
-                                case 3: return [2 /*return*/];
-                            }
-                        });
-                    }); });
+            socket.on("getBoxes", function (cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var boxes;
+                return __generator(this, function (_a) {
+                    boxes = socket.user.boxes;
+                    console.log(boxes);
+                    cb(boxes);
                     return [2 /*return*/];
-            }
+                });
+            }); });
+            socket.on("registerBox", function (_a, cb) {
+                var boxID = _a.boxID, boxName = _a.boxName, seenAs = _a.seenAs;
+                return __awaiter(void 0, void 0, void 0, function () {
+                    var box, _b;
+                    return __generator(this, function (_c) {
+                        switch (_c.label) {
+                            case 0: return [4 /*yield*/, mongoDB_1.Box.findById(boxID)];
+                            case 1:
+                                box = _c.sent();
+                                if (!box) return [3 /*break*/, 3];
+                                _b = socket;
+                                return [4 /*yield*/, socket.user.AddBox({ box: box._id, boxName: boxName, seenAs: seenAs })];
+                            case 2:
+                                _b.user = _c.sent();
+                                console.log(socket.user);
+                                cb({ status: "ok" });
+                                return [3 /*break*/, 4];
+                            case 3:
+                                cb({ status: "failed" });
+                                _c.label = 4;
+                            case 4: return [2 /*return*/];
+                        }
+                    });
+                });
+            });
+            socket.on("sendMsg", function (boxID, msg, cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var boxes, hasBox, box, status_1;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            boxes = socket.user.boxes;
+                            hasBox = boxes.findIndex(function (val) {
+                                return val.box.toHexString() === boxID;
+                            });
+                            if (!(hasBox !== -1)) return [3 /*break*/, 2];
+                            return [4 /*yield*/, mongoDB_1.Box.findById(boxID)];
+                        case 1:
+                            box = _a.sent();
+                            if (box) {
+                                status_1 = box.SendMsg(msg, boxNsp);
+                                return [2 /*return*/, cb(status_1)];
+                            }
+                            _a.label = 2;
+                        case 2:
+                            cb({ status: "box not found" });
+                            return [2 /*return*/];
+                    }
+                });
+            }); });
+            socket.on("removeBox", function (boxID, cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var _a, err_1;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            _b.trys.push([0, 2, , 3]);
+                            _a = socket;
+                            return [4 /*yield*/, socket.user.RemoveBox(boxID)];
+                        case 1:
+                            _a.user = _b.sent();
+                            cb({ status: "ok" });
+                            return [3 /*break*/, 3];
+                        case 2:
+                            err_1 = _b.sent();
+                            cb({ status: "failed" });
+                            return [3 /*break*/, 3];
+                        case 3: return [2 /*return*/];
+                    }
+                });
+            }); });
+            return [2 /*return*/];
         });
     }); });
     router.use("/admin", admin_1.default(passport));

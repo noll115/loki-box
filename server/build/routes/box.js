@@ -14,7 +14,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -59,6 +59,7 @@ var express_1 = require("express");
 var mongoDB_1 = require("../lib/mongoDB");
 var jwt = __importStar(require("jsonwebtoken"));
 var general_1 = require("../types/general");
+var passport_1 = require("../lib/passport");
 exports.default = (function (passport, boxNsp, userNsp) {
     var router = express_1.Router();
     router.get("/auth", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
@@ -87,36 +88,6 @@ exports.default = (function (passport, boxNsp, userNsp) {
             }
         });
     }); });
-    boxNsp.use(function (socket, next) {
-        var _a;
-        if ((_a = socket.handshake.query) === null || _a === void 0 ? void 0 : _a.token) {
-            var boxSocket_1 = socket;
-            var token = boxSocket_1.handshake.query.token;
-            jwt.verify(token, process.env.USER_SECRET, { algorithms: ["HS256"], ignoreExpiration: true }, function (err, decoded) { return __awaiter(void 0, void 0, void 0, function () {
-                var userData, box;
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            userData = decoded;
-                            if (err)
-                                return [2 /*return*/, next(err)];
-                            return [4 /*yield*/, mongoDB_1.Box.findById(userData.user.id)];
-                        case 1:
-                            box = _a.sent();
-                            if (box) {
-                                boxSocket_1.box = box;
-                            }
-                            else {
-                                next(new Error("Auth Error"));
-                            }
-                            return [2 /*return*/];
-                    }
-                });
-            }); });
-        }
-        else {
-            next(new Error('Auth Error'));
-        }
-    });
+    boxNsp.use(passport_1.SocketVerifyBoxJWT);
     return router;
 });

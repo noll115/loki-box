@@ -70,7 +70,7 @@ const MainView: React.FC<Props> = ({ authState, GetTokenInStorage }) => {
 
 
     return (
-        <NavigationContainer>
+        <NavigationContainer >
             <Stack.Navigator headerMode='none'>
                 {determineScreen(authState)}
             </Stack.Navigator>
@@ -78,15 +78,6 @@ const MainView: React.FC<Props> = ({ authState, GetTokenInStorage }) => {
         </NavigationContainer>
     )
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-    }
-});
 
 
 export default connector(MainView);
