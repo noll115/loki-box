@@ -1,83 +1,67 @@
 
-import mongoose, { Model, Schema, VirtualType } from "mongoose";
-import { IBoxDoc } from "./box";
+import mongoose, { Document, Model, Schema, VirtualType } from "mongoose";
+import { BoxClass } from "./box";
 import * as util from "../util";
+import { DocumentType, getModelForClass, isDocument, isDocumentArray, isRefType, modelOptions, pre, prop, Ref } from "@typegoose/typegoose";
+import { UserSocket } from "../../types/general";
 
 
 export enum Roles {
-    USER = "USER",
-    ADMIN = "ADMIN"
+    USER,
+    ADMIN
 }
 
 
-interface IUserBoxBaseDoc {
-    boxName: string,
-    seenAs: string
-}
 
-export interface IUserBoxDoc extends IUserBoxBaseDoc {
-    box: mongoose.Types.ObjectId
-}
+export class UserBoxesClass {
+    @prop()
+    public boxName!: string
 
-export interface IUserBoxPopulatedDoc extends IUserBoxBaseDoc {
-    box: IBoxDoc
-}
+    @prop()
+    public seenAs!: string
 
-
-interface IBaseUserDoc extends mongoose.Document {
-    email: string,
-    password: string,
-    role?: Roles,
-    IsValidPassword(pass: string): boolean,
-    AddBox(box: IUserBoxDoc): Promise<IUserDoc>
-    RemoveBox(boxID: string): Promise<IUserDoc>
-}
-
-export interface IUserDoc extends IBaseUserDoc {
-    boxes?: IUserBoxDoc[]
-}
-export interface IUserPopulatedDoc extends IBaseUserDoc {
-    boxes?: IUserBoxPopulatedDoc[]
-}
-
-export interface IUserModel extends Model<IUserDoc> {
-
+    @prop({ ref: () => BoxClass })
+    public box!: Ref<BoxClass>
 }
 
 
-const UserSchema = new Schema<IUserDoc>({
-    email: { type: String, required: true, unique: true, index: true },
-    password: { type: String, required: true, maxLength: 20 },
-    role: { type: String, enum: Object.values(Roles), default: Roles.USER },
-    boxes: {
-        type: [{
-            boxName: { type: String, required: true },
-            seenAs: { type: String, required: true },
-            box: { type: Schema.Types.ObjectId, ref: 'boxes' }
-        }], default: []
-    },
-});
+@pre<UserClass>('save', async function () {
+    this.password = await util.HashPass(this.password);
+})
+@modelOptions({ schemaOptions: { collection: 'users' } })
+export class UserClass {
+    @prop({ required: true, unique: true })
+    public email!: string;
+    @prop({ required: true })
+    public password!: string;
+    @prop({ enum: Roles, default: Roles.USER })
+    public role?: Roles;
 
-UserSchema.method({
-    async IsValidPassword(this: IUserDoc, pass: string) {
+    @prop({ type: UserBoxesClass, _id: false, default: [] })
+    public boxes?: UserBoxesClass[]
+
+    public async isValidPassword(this: DocumentType<UserClass>, pass: string): Promise<boolean> {
         return await util.ValidatePass(pass, this.password);
-    },
-    async AddBox(this: IUserDoc, box: IUserBoxDoc) {
+    }
+    public async addBox(this: DocumentType<UserClass>, box: UserBoxesClass): Promise<DocumentType<UserClass>> {
+
         this.boxes!.push(box);
+        console.log(this.boxes);
+
         return await this.save()
-    },
-    async RemoveBox(this: IUserDoc, boxID: string) {
+    }
+    public async removeBox(this: DocumentType<UserClass>, boxID: string): Promise<DocumentType<UserClass>> {
         return await this.updateOne({ $pull: { "boxes.box": boxID } }).exec();
     }
-});
+    public getBox(this: DocumentType<UserClass>, id: string) {
+        let box = this.boxes!.find(userBox => {
+            if (isRefType(userBox.box)) {
+                return userBox.box.toHexString() === id;
+            }
+        }) || null;
+        return box;
+    }
+}
 
+export const userModel = getModelForClass(UserClass);
 
-
-UserSchema.pre("save", async function (this: IUserDoc, next) {
-    this.password = await util.HashPass(this.password);
-    next();
-});
-
-
-
-export const User = mongoose.model<IUserDoc, IUserModel>("users", UserSchema);

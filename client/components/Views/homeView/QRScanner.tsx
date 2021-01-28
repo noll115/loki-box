@@ -1,67 +1,71 @@
 import React, { useEffect, useState } from 'react'
 import { Modal, StyleSheet, View, Text } from 'react-native';
-import { connect, ConnectedProps } from 'react-redux';
-import { RootState } from '../../../redux'
 import { BarCodeScannedCallback, BarCodeScanner } from 'expo-barcode-scanner';
-import { TabNavProp } from './homeViewNav';
+import { BlurView } from 'expo-blur';
 import Button from '../../Button';
 
 
-const mapState = (state: RootState) => ({
-    socketState: state.socket
-})
-
-const mapDispatch = {
-
+interface Props {
+    onScan: (box: ScannedBox) => void
+    onClose: () => void,
+    showCam: boolean
 }
 
-const connector = connect(mapState, mapDispatch);
 
-type Props = ConnectedProps<typeof connector> & { navigation: TabNavProp<'QRScanner'> }
+export interface ScannedBox {
+    boxID: string
+}
 
 
 
-
-const QRScanner: React.FC<Props> = ({ socketState, navigation }) => {
+const QRScanner: React.FC<Props> = ({ onScan, showCam, onClose }) => {
     const [hasPermission, setHasPermission] = useState(false);
     const [scanned, setScanned] = useState(false);
-    const [parsedData, setParsedData] = useState(null);
-
     useEffect(() => {
+        setScanned(false);
+        setHasPermission(false);
+    }, [showCam])
+
+    const handleOnShown = () => {
         (async () => {
             const { status } = await BarCodeScanner.requestPermissionsAsync();
             setHasPermission(status === 'granted')
         })();
-    }, []);
+    }
+
+    const Scanner = () => {
+
+        return (
+            <View style={{ height: '80%', width: '89%', flex: 0.8 }}>
+                {hasPermission && <BarCodeScanner
+                    type='back'
+                    barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+                    onBarCodeScanned={scanned ? undefined : handleBarCodeScan}
+                    style={{ flex: 1 }}
+                />}
+            </View>
+        )
+    }
 
 
     const handleBarCodeScan: BarCodeScannedCallback = ({ data }) => {
-        setParsedData(JSON.parse(data));
+        const parseData: ScannedBox = JSON.parse(data);
         setScanned(true);
+        onScan(parseData);
     }
 
     return (
-        <View style={styles.container}>
-            {hasPermission &&
-                <BarCodeScanner
-                    type='back'
-                    barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
-                    onBarCodeScanned={handleBarCodeScan}
-                    style={{ width: '100%', height: '100%' }}
-                />}
-            <Modal
-                animationType='slide'
-                visible={scanned}
-                transparent={true}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modal}>
-                        <Text >{JSON.stringify(parsedData)}</Text>
-                        <Button title="Add" onPress={() => { setScanned(false) }} />
+        <Modal animationType='slide' transparent={true} visible={showCam} onShow={handleOnShown} >
+            <BlurView tint='dark' intensity={50} style={styles.modalContainer}>
+                <View style={styles.modal}>
+                    <View style={{ justifyContent: 'center', alignItems: 'center', flex: 0.15, width: '100%' }}>
+                        <Text style={{ fontSize: 40 }}>Scan QR Code</Text>
                     </View>
+                    {Scanner()}
+                    <Button title='Back' btnStyle={{ margin: 0, backgroundColor: 'transparent', flex: 0.1 }} onPress={onClose} />
                 </View>
-            </Modal>
-        </View>
+            </BlurView>
+        </Modal>
     );
 }
 
@@ -72,18 +76,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     modalContainer: {
-        height: '100%',
-        width: '100%',
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center'
     },
     modal: {
-        backgroundColor: '#FFCABE',
-        height: '80%',
+        backgroundColor: '#FEF4EA',
+        height: '75%',
         width: '90%',
-        borderRadius: 10,
-        padding: 30
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 30
     }
 })
 
-export default connector(QRScanner);
+export default QRScanner;

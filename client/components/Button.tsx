@@ -4,7 +4,7 @@ import { StyleSheet, TouchableOpacity, Text, StyleProp, ViewStyle, TextStyle } f
 
 interface Props {
     onPress: () => void,
-    title: string,
+    title: string | JSX.Element,
     isDisabled?: boolean,
     btnStyle?: StyleProp<ViewStyle>,
     textStyle?: StyleProp<TextStyle>,
@@ -24,13 +24,11 @@ const Button: React.FC<Props> = ({ btnStyle, textStyle, onPress, title, isDisabl
 
 const styles = StyleSheet.create({
     button: {
-        width: '100%',
         backgroundColor: '#D4668E',
         borderRadius: 10,
         padding: '5%',
         alignItems: 'center',
         justifyContent: 'center',
-        alignSelf: 'flex-end',
 
     },
     btnShadow: {
@@ -44,7 +42,7 @@ const styles = StyleSheet.create({
         elevation: 6
     },
     btnText: {
-        color: '#444444',
+        color: '#171216',
         fontWeight: 'bold',
         fontSize: 20
     },

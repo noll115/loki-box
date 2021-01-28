@@ -1,6 +1,9 @@
-import { AuthActions, AuthActionTypes, SocketActionTypes, ThunkAuthAction, ThunkSocketAction } from "../types/redux"
+import { AuthActions, AuthActionTypes, SocketActions, SocketActionTypes, ThunkAuthAction, UserActions, UserActionTypes } from "../types/redux"
 import { io } from "socket.io-client";
 import * as secureStore from "expo-secure-store";
+import { RootState } from ".";
+import { ThunkAction } from "redux-thunk";
+import { IBox, IMessage } from "../types/general";
 
 
 
@@ -32,7 +35,10 @@ export const Login = (email: string, pass: string): ThunkAuthAction => {
             }
             let json = await (res.json() as Promise<{ jwtToken: string }>);
             await secureStore.setItemAsync('jwtToken', json.jwtToken);
-            return dispatch({ type: AuthActionTypes.LOGGED_IN, payload: { jwtToken: json.jwtToken } })
+            return dispatch({
+                type: AuthActionTypes.LOGGED_IN,
+                payload: { jwtToken: json.jwtToken }
+            })
 
         } catch (err) {
             console.log(err);
@@ -41,6 +47,14 @@ export const Login = (email: string, pass: string): ThunkAuthAction => {
     }
 }
 
+
+export const Logout = (): ThunkAuthAction => {
+    return async (dispatch, getState, api) => {
+        await secureStore.deleteItemAsync('jwtToken');
+        getState().socket.socket?.disconnect()
+        return dispatch({ type: AuthActionTypes.LOGGED_OUT })
+    }
+}
 
 
 export const GetTokenInStorage = (): ThunkAuthAction => {
@@ -76,6 +90,7 @@ export const Register = (email: string, pass: string): ThunkAuthAction => {
 
             if (res.status !== 200) {
                 let text = await res.text();
+                console.log(text);
                 return dispatch(AuthError(text));
             }
             let json = await (res.json() as Promise<{ jwtToken: string }>);
@@ -93,7 +108,7 @@ export const RemoveError = () => ({
     type: AuthActionTypes.REMOVE_ERR
 });
 
-export const ConnectSocket = (): ThunkSocketAction => {
+export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActions | UserActions> => {
     return async (dispatch, getState, api) => {
         let jwt = getState().auth.jwtToken;
         dispatch({
@@ -115,8 +130,45 @@ export const ConnectSocket = (): ThunkSocketAction => {
             })
 
         });
+        socket.on('boxes', (boxes: IBox[]) => {
+
+            let hasPrevSelected = getState().user.selectedBox;
+            if (hasPrevSelected) {
+                dispatch({
+                    type: UserActionTypes.UPDATE_BOXES,
+                    payload: {
+                        boxes
+                    }
+                })
+            }
+            else if (boxes.length > 0) {
+                socket.emit('getMsgHistory', boxes[0].box, (res) => {
+
+                    if (res.status === 'ok') {
+                        dispatch({
+                            type: UserActionTypes.UPDATE_BOXES,
+                            payload: {
+                                boxes,
+                                selectedBox: boxes[0],
+                                messages: res.msgs
+                            }
+                        })
+                    }
+                })
+            } else {
+                dispatch({
+                    type: UserActionTypes.UPDATE_BOXES,
+                    payload: {
+                        boxes
+                    }
+                })
+            }
+        })
         socket.on('connect_error', (err: Error) => {
             console.log(`connect ERROR | ${err.message}`);
+            if (err.message === 'Not found') {
+                dispatch(Logout())
+            }
             dispatch({
                 type: SocketActionTypes.SOCKET_DISCONNECTED,
                 payload: {
@@ -129,6 +181,23 @@ export const ConnectSocket = (): ThunkSocketAction => {
             dispatch({
                 type: SocketActionTypes.SOCKET_DISCONNECTED
             })
+        })
+    }
+}
+
+export const SelectBox = (box: IBox): ThunkAction<void, RootState, string, UserActions> => {
+    return async (dispatch, getState, api) => {
+        let socket = getState().socket.socket;
+        socket?.emit('getMsgHistory', box.box, (data) => {
+            if (data.status === 'ok') {
+                return dispatch({
+                    type: UserActionTypes.SELECT_BOX,
+                    payload: {
+                        box,
+                        messages: data.msgs
+                    }
+                })
+            }
         })
     }
 }

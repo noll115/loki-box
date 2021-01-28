@@ -1,8 +1,8 @@
-import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react'
 import { StyleSheet, Text, View, TextInput, Animated } from 'react-native';
 import { connect, ConnectedProps } from 'react-redux';
 import { Register, RootState } from '../../../redux'
+import { StackNavProp } from '../../../types/navigation';
 import UserForm from '../../UserForm';
 
 
@@ -18,7 +18,7 @@ const mapDispatch = {
 
 const connector = connect(mapState, mapDispatch);
 
-type Props = ConnectedProps<typeof connector> & { navigation: StackNavigationProp<{}> }
+type Props = ConnectedProps<typeof connector> & StackNavProp<'Register'>
 
 
 

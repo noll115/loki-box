@@ -1,5 +1,6 @@
-import { Socket } from "socket.io";
-import { IBoxDoc, IUserDoc, IUserPopulatedDoc, Roles } from "../lib/mongoDB";
+import { DocumentType } from "@typegoose/typegoose";
+import * as socketio from "socket.io";
+import { BoxClass, Roles, UserClass } from "../lib/mongoDB";
 
 export class HttpException extends Error {
     status: number;
@@ -22,14 +23,28 @@ export interface JWTBoxData {
     }
 }
 
-export interface TokenSocket extends Socket {
+export interface NameSpaces {
+    user: socketio.Namespace,
+    box: socketio.Namespace
+}
+
+
+
+export interface TokenSocket extends socketio.Socket {
     decoded_token: JWTBoxData | JWTUserData;
 }
 
 export interface UserSocket extends TokenSocket {
-    user: IUserDoc | IUserPopulatedDoc
+    user: DocumentType<UserClass>
 }
 
 export interface BoxSocket extends TokenSocket {
-    box: IBoxDoc
+    box: DocumentType<BoxClass>
 }
+
+export interface INewBox {
+    boxID: string,
+    boxName: string,
+    seenAs: string
+}
+

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { StyleSheet, Text, View, TextInput, Animated } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { connect, ConnectedProps } from 'react-redux';
 import { RootState } from '../../../redux'
 import Button from '../../Button';
@@ -20,7 +20,7 @@ const mapDispatch = {
 
 const connector = connect(mapState, mapDispatch);
 
-type Props = ConnectedProps<typeof connector> & { navigation: StackNavProp<'Login'> }
+type Props = ConnectedProps<typeof connector> & StackNavProp<'Login'>
 
 
 

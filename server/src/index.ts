@@ -1,10 +1,11 @@
 import express, { ErrorRequestHandler } from "express";
 import "./lib/mongoDB";
-import boxRoute from "./routes/box";
+import boxRoute from "./routes/boxRoute";
 import passport from "./lib/passport";
-import userRoute from "./routes/user";
-import { HttpException } from "./types/general";
+import userRoute from "./routes/userRoute";
+import { HttpException, NameSpaces } from "./types/general";
 import { Server } from 'socket.io'
+import { createRedisAdapter, RedisSocket } from "./lib/redis";
 
 
 const app = express();
@@ -13,14 +14,19 @@ server.listen(process.env.PORT, () => {
     console.log(`Listening on ${process.env.PORT}`);
 })
 let io = new Server(server, { serveClient: false });
-let userNsp = io.of("/user");
-let boxNsp = io.of("/box");
+
+let { adapter, redisClient } = createRedisAdapter();
+
+let redisSocket = new RedisSocket(redisClient);
+
+io.adapter(adapter)
+let nameSpaces: NameSpaces = { user: io.of("/user"), box: io.of("/box") }
 
 app.use(express.json())
 app.use(passport.initialize())
 
-app.use("/user", userRoute(passport, userNsp, boxNsp));
-app.use("/box", boxRoute(passport, boxNsp, userNsp));
+app.use("/user", userRoute(passport, redisSocket, nameSpaces));
+app.use("/box", boxRoute(passport, redisSocket, nameSpaces));
 
 
 let ErrorHandler: ErrorRequestHandler = (err: HttpException, req, res, next) => {

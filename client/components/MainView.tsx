@@ -10,8 +10,6 @@ import { RootStackParamList } from '../types/navigation';
 
 
 
-
-
 const mapState = (state: RootState) => ({
     authState: state.auth.state
 })
@@ -66,8 +64,6 @@ const MainView: React.FC<Props> = ({ authState, GetTokenInStorage }) => {
     useEffect(() => {
         GetTokenInStorage();
     }, [])
-
-
 
     return (
         <NavigationContainer >

@@ -1,3 +1,4 @@
+import { modelOptions, prop } from "@typegoose/typegoose";
 import mongoose from "mongoose";
 export * from "./box";
 export * from "./user";
@@ -6,6 +7,7 @@ if (process.env.DB) {
     mongoose.connect(process.env.DB, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
+        useCreateIndex: true,
         dbName: "loki-box"
     });
 
@@ -28,7 +30,3 @@ if (process.env.DB) {
         });
     });
 }
-
-
-
-

@@ -2,6 +2,7 @@ import { Socket } from "socket.io-client";
 import { Action } from "redux"
 import { RootState } from "../redux";
 import { ThunkAction } from "redux-thunk";
+import { IBox, IMessage } from "./general";
 export enum SOCKET_STATE {
     ONLINE = "ONLINE",
     CONNECTING = "CONNECTING",
@@ -15,7 +16,8 @@ export enum AUTH_STATE {
 }
 
 
-export type SocketState = {
+
+export interface SocketState {
     state: SOCKET_STATE,
     socket: Socket | null,
     error: string | null;
@@ -26,6 +28,36 @@ export interface AuthState {
     jwtToken: string
     error: string | null
 }
+
+export interface UserState {
+    boxes: IBox[] | null,
+    selectedBox: IBox | null,
+    messages: Record<string, IMessage[]>
+}
+
+export enum UserActionTypes {
+    UPDATE_BOXES = "UPDATE_BOXES",
+    SELECT_BOX = "SELECT_BOX"
+}
+
+interface UpdateBoxes extends Action<UserActionTypes.UPDATE_BOXES> {
+    payload: {
+        boxes: IBox[],
+        selectedBox?: IBox,
+        messages?: IMessage[]
+    }
+}
+
+interface SelectBox extends Action<UserActionTypes.SELECT_BOX> {
+    payload: {
+        box: IBox,
+        messages: IMessage[]
+    }
+}
+
+export type UserActions = UpdateBoxes | SelectBox;
+
+/*--------------------------------------------------------------------------------*/
 
 export enum AuthActionTypes {
     FINDING_TOKEN = "FINDING_TOKEN",

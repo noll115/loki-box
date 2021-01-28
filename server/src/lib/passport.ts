@@ -1,7 +1,7 @@
 import { Strategy as jwtStrategy, ExtractJwt, StrategyOptions } from "passport-jwt";
 import { Strategy as localStrategy } from "passport-local";
 import { PassportStatic } from "passport";
-import { Box, User, Roles } from "./mongoDB";
+import { boxModel, userModel, Roles } from "./mongoDB";
 import { BoxSocket, JWTBoxData, JWTUserData, UserSocket } from "../types/general";
 import { Socket } from "socket.io";
 import { ExtendedError } from "socket.io/dist/namespace";
@@ -24,7 +24,7 @@ const boxOptions: StrategyOptions = {
 
 passport.use("box-jwt", new jwtStrategy(boxOptions, async (token: JWTBoxData, done) => {
     try {
-        let box = await Box.findById(token.user.id);
+        let box = await boxModel.findById(token.user.id);
         if (box) {
             return done(null, box)
         }
@@ -36,7 +36,7 @@ passport.use("box-jwt", new jwtStrategy(boxOptions, async (token: JWTBoxData, do
 
 passport.use("user-jwt", new jwtStrategy(userOptions, async (token: JWTUserData, done) => {
     try {
-        let user = await User.findById(token.user.id);
+        let user = await userModel.findById(token.user.id);
         if (user) {
             return done(null, user);
         }
@@ -51,11 +51,11 @@ passport.use("login", new localStrategy({
     usernameField: "email"
 }, async (email, password, done) => {
     try {
-        let user = await User.findOne({ email });
+        let user = await userModel.findOne({ email });
         if (!user) {
             return done(null, false, { message: "User not found" });
         }
-        let valid = await user.IsValidPassword(password);
+        let valid = await user.isValidPassword(password);
         if (!valid) {
             return done(null, false, { message: "Wrong password" });
         }

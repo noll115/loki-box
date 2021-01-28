@@ -1,6 +1,17 @@
 import { combineReducers } from "redux";
-import { AuthState, AUTH_STATE, SocketState, SOCKET_STATE } from "../types/redux";
-import { AuthActions, AuthActionTypes, SocketActions, SocketActionTypes } from "../types/redux";
+import {
+    AuthState,
+    AUTH_STATE,
+    SocketState,
+    SOCKET_STATE,
+    UserState,
+    UserActions,
+    AuthActions,
+    AuthActionTypes,
+    SocketActions,
+    SocketActionTypes,
+    UserActionTypes
+} from "../types/redux";
 
 const INIT_SOCKET_STATE: SocketState = {
     state: SOCKET_STATE.OFFLINE,
@@ -13,6 +24,36 @@ const INIT_AUTH_STATE: AuthState = {
     jwtToken: "",
     error: null
 }
+
+const INIT_USER_STATE: UserState = {
+    boxes: null,
+    messages: {},
+    selectedBox: null
+}
+
+
+const UserReducer = (state = INIT_USER_STATE, action: UserActions): UserState => {
+    switch (action.type) {
+        case UserActionTypes.UPDATE_BOXES:
+            let { payload: { boxes, messages, selectedBox } } = action;
+            return {
+                messages: selectedBox ? { [selectedBox.box]: messages! } : { ...state.messages },
+                boxes: action.payload.boxes,
+                selectedBox: action.payload.selectedBox || state.selectedBox
+            }
+        case UserActionTypes.SELECT_BOX:
+            return {
+                messages: {
+                    ...state.messages,
+                    [action.payload.box.box]: action.payload.messages
+                },
+                boxes: [...state.boxes!], selectedBox: state.selectedBox
+            }
+        default:
+            return state;
+    }
+}
+
 
 
 
@@ -37,7 +78,7 @@ const AuthReducer = (state = INIT_AUTH_STATE, action: AuthActions): AuthState =>
         case AuthActionTypes.LOGGING_IN:
             return { ...state, state: AUTH_STATE.LOGGING_IN }
         case AuthActionTypes.LOGGED_OUT:
-            return { ...state, state: AUTH_STATE.NOT_LOGGED_IN, error: action.payload?.error || null }
+            return { ...state, jwtToken: "", state: AUTH_STATE.NOT_LOGGED_IN, error: action.payload?.error || null }
         case AuthActionTypes.REMOVE_ERR:
             return { ...state, error: null }
         default:
@@ -48,5 +89,6 @@ const AuthReducer = (state = INIT_AUTH_STATE, action: AuthActions): AuthState =>
 
 export const rootReducer = combineReducers({
     auth: AuthReducer,
-    socket: SocketReducer
+    socket: SocketReducer,
+    user: UserReducer
 });
