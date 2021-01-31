@@ -1,113 +1,12 @@
-import { Animated, GestureResponderEvent, Pressable, StatusBar, StyleSheet, Text, TextInput, View, PanResponder } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react'
-import { RootState, Logout } from '../../../redux';
+import { StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { forwardRef, useRef, useState } from 'react'
+import { RootState } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
-import Canvas, { CanvasRenderingContext2D, Path2D } from 'react-native-canvas'
+import Canvas from 'react-native-canvas'
 import { StackNavProp } from '../homeView/homeViewNav';
-import * as ScreenOrientation from 'expo-screen-orientation'
-
-
-
-interface MsgProps {
-    canvas: Canvas,
-
-}
-
-const CanvasTextInput: React.FC<MsgProps> = ({ canvas }) => {
-    let [text, setText] = useState('');
-    let textRef = useRef<TextInput | null>(null);
-    let [editable, setEditable] = useState(true);
-    let [movable, setMovable] = useState(false);
-    const pan = useRef(new Animated.ValueXY({ x: canvas.width / 2, y: canvas.height / 2 })).current;
-    const bounceAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        if (movable) {
-            Animated.timing(bounceAnim, {
-                toValue: 1,
-                duration: 200,
-                useNativeDriver: true,
-            }).start(({ finished }) => {
-                if (finished)
-                    bounceAnim.setValue(0)
-            })
-        }
-    }, [movable])
-
-    useEffect(() => {
-        if (editable && textRef.current) {
-            textRef.current.focus();
-        }
-    }, [editable, textRef])
-
-    const panResponder = PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => !editable && movable,
-        onPanResponderGrant: () => {
-            pan.setOffset({
-                x: (pan as any).x._value,
-                y: (pan as any).y._value
-            })
-        },
-        onPanResponderMove: Animated.event([
-            null,
-            {
-                dx: pan.x,
-                dy: pan.y,
-            }
-        ], {
-            useNativeDriver: false
-        }),
-        onPanResponderRelease: (e, gesture) => {
-            setMovable(false);
-            console.log(pan);
-
-            pan.flattenOffset()
-        }
-
-    });
-
-
-
-    const handleLongPress = (e: GestureResponderEvent) => {
-        setMovable(true);
-    }
-    const handleQuickPress = () => {
-        setEditable(true);
-    }
-    useEffect(() => {
-        if (editable && textRef.current) {
-            textRef.current.focus()
-        }
-    }, [editable, textRef])
-
-    return (
-        <Animated.View
-            {...panResponder.panHandlers}
-            style={[{ position: 'absolute' }, pan.getTranslateTransform(), {
-                transform: [{
-                    scale: bounceAnim.interpolate({
-                        inputRange: [0, 0.5, 1],
-                        outputRange: [1, 1.5, 1]
-                    })
-                }]
-            }]}
-        >
-            <Pressable delayLongPress={250} onPress={handleQuickPress} onLongPress={handleLongPress} style={{ padding: 10 }}>
-                <TextInput
-                    value={text}
-                    editable={editable}
-                    autoFocus
-                    onEndEditing={e => setEditable(false)}
-                    ref={textRef}
-                    onChangeText={e => setText(e)}
-                    style={{ color: 'white', fontSize: 30 }} />
-            </Pressable>
-        </Animated.View>
-    )
-
-}
-
+import { TouchableOpacity, gestureHandlerRootHOC } from 'react-native-gesture-handler';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import CanvasTextInput from './CanvasTextInput'
 
 
 const mapState = (state: RootState) => ({
@@ -126,37 +25,63 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
     let { box } = route.params
     let canvasRef = useRef<Canvas | null>(null)
     let [texts, setTexts] = useState<JSX.Element[]>([]);
-    navigation.addListener('beforeRemove', () => {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
-    })
-    useEffect(() => {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-    }, [])
+    let textInputsRefs = useRef<Array<CanvasTextInput | null>>([]);
+
 
     const handleCanvas = (canvas: Canvas) => {
-        if (canvas) {
+        if (canvas && !canvasRef.current) {
             canvasRef.current = canvas;
             const ctx = canvas.getContext('2d')
-            canvas.height = 320;
-            canvas.width = 240;
-            ctx.fillRect(0, 0, 240, 320)
+            canvas.height = 240;
+            canvas.width = 320;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         }
     }
+
+
     const addText = () => {
         let canvas = canvasRef.current;
         if (canvas) {
-            // ctx.fillStyle = 'white'
-            // ctx.font = '40px ariel'
-            // ctx.fillText('1244', 120, 120)
-            // ctx.save();
-            setTexts(prev => [...prev, <CanvasTextInput key={prev.length} canvas={canvas!} />])
+            textInputsRefs.current = [...textInputsRefs.current, null];
+            setTexts(prev => {
+                let newArr = [...prev,
+                <CanvasTextInput
+                    key={prev.length}
+                    ref={ref => textInputsRefs.current[prev.length] = ref}
+                    canvas={canvas!} />
+                ];
+                return newArr
+            })
         }
     }
     const draw = () => {
         const ctx = canvasRef.current;
         if (ctx) {
         }
+    }
+
+    const submit = () => {
+        const ctx = canvasRef.current?.getContext('2d');
+        console.log(textInputsRefs.current);
+
+        textInputsRefs.current.forEach(ref => {
+            let data = ref?.getInputData();
+            console.log(ref);
+
+            if (ctx && data) {
+                console.log(data);
+
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'white'
+                ctx.font = `${data.fontSize}px arial`;
+                ctx.strokeRect(data.pos.x, data.pos.y, data.width, data.height);
+                ctx.fillText(data.text, data.pos.x, data.fontSize + data.pos.y)
+            }
+
+        });
+        setTexts([]);
+        textInputsRefs.current = [];
     }
 
     return (
@@ -169,7 +94,7 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
                     <Canvas ref={handleCanvas} style={{ borderWidth: 1 }} />
                     {texts}
                 </View>
-                {/* <View style={styles.btns}>
+                <View style={styles.btns}>
                     <TouchableOpacity onPress={addText} style={styles.btn}>
                         <Feather name="type" size={30} color="black" />
                         <Text style={styles.btnText}>Insert Text</Text>
@@ -178,7 +103,13 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
                         <MaterialCommunityIcons name="draw" size={30} color="black" />
                         <Text style={styles.btnText}>Draw</Text>
                     </TouchableOpacity>
-                </View> */}
+                </View>
+            </View>
+            <View style={{ flex: 2, margin: 20, backgroundColor: '#D4668E', borderRadius: 20 }}>
+                <TouchableOpacity style={{ height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center' }} onPress={submit}>
+                    <Text style={{ fontSize: 25 }}>Submit</Text>
+                </TouchableOpacity>
+
             </View>
         </View>
     )
@@ -206,7 +137,7 @@ const styles = StyleSheet.create({
         color: '#FEF4EA',
     },
     body: {
-        paddingVertical: 50,
+        paddingVertical: '3%',
         flex: 15,
         alignItems: 'center',
     },

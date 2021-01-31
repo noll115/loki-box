@@ -20,6 +20,7 @@ type Props = { onOpenBoxMenu(): void } & ConnectedProps<typeof connector>
 const BoxListHeader: React.FC<Props> = ({ user, onOpenBoxMenu }) => {
     let { boxes, selectedBox } = user;
 
+
     if (boxes === null) {
         return null
     }

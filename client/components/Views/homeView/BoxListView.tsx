@@ -10,6 +10,7 @@ import { connect, ConnectedProps } from 'react-redux';
 import BoxListHeader from '../../BoxListHeader';
 import DrawerMenu from '../../DrawerMenu';
 
+
 const mapState = (state: RootState) => ({
     user: state.user
 })
@@ -29,7 +30,6 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
     let boxMessages: JSX.Element[] | null = null;
     const [BoxMenuOpen, setBoxMenuOpen] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
-
 
     useEffect(() => {
         if (BoxMenuOpen) {
