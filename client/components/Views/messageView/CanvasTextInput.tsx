@@ -25,11 +25,12 @@ import {
 
 
 
-const FONT_SIZE = 23
+const MIN_FONT_SIZE = 23
+const MAX_FONT_SIZE = 60
 
 interface MsgProps {
     canvas: Canvas,
-
+    canEdit: boolean
 }
 
 interface CanvasTextInput {
@@ -47,25 +48,26 @@ interface CanvasInputData {
 }
 
 const AnimTextInput = Animated.createAnimatedComponent(TextInput);
-const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps> = ({ canvas }, ref) => {
+const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps> = ({ canvas, canEdit }, ref) => {
     let [text, setText] = useState('');
     let textRef = useRef<any | null>(null);
     let [editable, setEditable] = useState(true);
     let pressGesRef = useRef<LongPressGestureHandler | null>(null);
     let panGesRef = useRef<PanGestureHandler | null>(null);
     let pinchGesRef = useRef<PinchGestureHandler | null>(null);
+    
     let data = useRef<CanvasInputData>({
-        width: FONT_SIZE,
-        height: FONT_SIZE,
-        fontSize: FONT_SIZE,
-        pos: { x: (canvas.width / 2) - FONT_SIZE / 2, y: (canvas.height / 2) - FONT_SIZE / 2 }
+        width: MIN_FONT_SIZE,
+        height: MIN_FONT_SIZE,
+        fontSize: MIN_FONT_SIZE,
+        pos: { x: (canvas.width / 2) - MIN_FONT_SIZE / 2, y: (canvas.height / 2) - MIN_FONT_SIZE / 2 }
     })
     let textWidth = useValue(0);
     let textHeight = useValue(0);
 
     let pinchScale = useValue(1);
-    let baseScale = useValue(FONT_SIZE);
-    let finalScale = Animated.multiply(pinchScale, baseScale);
+    let baseScale = useValue(MIN_FONT_SIZE);
+    let finalScale = min(max(Animated.multiply(pinchScale, baseScale), MIN_FONT_SIZE), MAX_FONT_SIZE);
     let heldLong = useValue(0);
     let dragX = useValue(0);
     let dragY = useValue(0);
@@ -129,7 +131,6 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
                             cond(
                                 eq(gestureState, State.ACTIVE),
                                 [
-                                    debug('pre', add(offsetX, dragX)),
                                     set(offsetX, min(max(0, add(offsetX, dragX)), sub(canvas.width, textWidth))),
                                     set(offsetY, min(max(0, add(offsetY, dragY)), sub(canvas.height, textHeight))),
                                 ]
@@ -157,7 +158,7 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
             cond(
                 eq(state, State.END),
                 [
-                    set(baseScale, multiply(pinchScale, baseScale)),
+                    set(baseScale, finalScale),
                     set(pinchScale, 1),
                     call([baseScale], setScale)
                 ]
@@ -176,13 +177,13 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
         offsetY
     );
 
-    let transX = debug('finalX', cond(
-        eq(heldLong, new Animated.Value(1)),
+    let transX = cond(
+        eq(heldLong, 1),
         moveX,
         offsetX
-    ));
+    );
     let transY = cond(
-        eq(heldLong, new Animated.Value(1)),
+        eq(heldLong, 1),
         moveY,
         offsetY
     )
@@ -209,12 +210,12 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
                 {editable && <Animated.View style={{ backgroundColor: 'grey', ...StyleSheet.absoluteFillObject }} />}
                 <AnimTextInput
                     onLayout={({ nativeEvent }: any) => {
-                        console.log('change');
-
-                        textHeight.setValue(nativeEvent.layout.height as any);
-                        textWidth.setValue(nativeEvent.layout.width as any);
-                        data.current.width = nativeEvent.layout.width
-                        data.current.height = nativeEvent.layout.height
+                        let width = nativeEvent.layout.width;
+                        let height = nativeEvent.layout.height;
+                        textHeight.setValue(height);
+                        textWidth.setValue(width);
+                        data.current.width = width;
+                        data.current.height = height;
                     }}
                     value={text}
                     textAlign='center'

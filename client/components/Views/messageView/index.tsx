@@ -1,5 +1,5 @@
-import { StatusBar, StyleSheet, Text, View } from 'react-native';
-import React, { forwardRef, useRef, useState } from 'react'
+import { Dimensions, GestureResponderEvent, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { forwardRef, useEffect, useRef, useState } from 'react'
 import { RootState } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
 import Canvas from 'react-native-canvas'
@@ -7,7 +7,8 @@ import { StackNavProp } from '../homeView/homeViewNav';
 import { TouchableOpacity, gestureHandlerRootHOC } from 'react-native-gesture-handler';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import CanvasTextInput from './CanvasTextInput'
-
+import * as Orientation from "expo-screen-orientation";
+import { SketchCanvas } from './SketchCanvas';
 
 const mapState = (state: RootState) => ({
     user: state.user
@@ -26,16 +27,35 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
     let canvasRef = useRef<Canvas | null>(null)
     let [texts, setTexts] = useState<JSX.Element[]>([]);
     let textInputsRefs = useRef<Array<CanvasTextInput | null>>([]);
+    let [showDrawView, setShowDrawView] = useState(false);
+    let sketchCanvas = useRef<SketchCanvas | null>(null);
+
+    useEffect(() => {
+        let unsub = navigation.addListener('beforeRemove', e => {
+            if (showDrawView) {
+                e.preventDefault();
+                return setShowDrawView(false);
+            }
+        })
+        return unsub;
+    }, [showDrawView])
+
+    useEffect(() => {
+        if (showDrawView) {
+            Orientation.lockAsync(Orientation.OrientationLock.LANDSCAPE)
+                .then(() => sketchCanvas.current?.scaleView())
+        } else {
+            Orientation.lockAsync(Orientation.OrientationLock.PORTRAIT)
+                .then(() => sketchCanvas.current?.scaleView())
+        }
+    }, [showDrawView])
+
 
 
     const handleCanvas = (canvas: Canvas) => {
         if (canvas && !canvasRef.current) {
             canvasRef.current = canvas;
-            const ctx = canvas.getContext('2d')
-            canvas.height = 240;
-            canvas.width = 320;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+            sketchCanvas.current = new SketchCanvas(canvas);
         }
     }
 
@@ -49,33 +69,26 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
                 <CanvasTextInput
                     key={prev.length}
                     ref={ref => textInputsRefs.current[prev.length] = ref}
-                    canvas={canvas!} />
+                    canvas={canvas!}
+                    canEdit={!showDrawView}
+                />
                 ];
                 return newArr
             })
         }
     }
-    const draw = () => {
-        const ctx = canvasRef.current;
-        if (ctx) {
-        }
-    }
 
     const submit = () => {
         const ctx = canvasRef.current?.getContext('2d');
-        console.log(textInputsRefs.current);
-
         textInputsRefs.current.forEach(ref => {
             let data = ref?.getInputData();
             console.log(ref);
 
             if (ctx && data) {
                 console.log(data);
-
                 ctx.fillStyle = 'white';
                 ctx.strokeStyle = 'white'
                 ctx.font = `${data.fontSize}px arial`;
-                ctx.strokeRect(data.pos.x, data.pos.y, data.width, data.height);
                 ctx.fillText(data.text, data.pos.x, data.fontSize + data.pos.y)
             }
 
@@ -84,33 +97,57 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
         textInputsRefs.current = [];
     }
 
+
+    const drawStart = (e: GestureResponderEvent) => {
+        let { locationX: x, locationY: y } = e.nativeEvent;
+        if (showDrawView)
+            sketchCanvas.current?.startDraw({ x, y });
+    }
+
+    const drawLines = (e: GestureResponderEvent) => {
+        let { locationX: x, locationY: y } = e.nativeEvent;
+        e.preventDefault();
+        if (showDrawView)
+            sketchCanvas.current?.draw({ x, y });
+    }
+    const drawEnd = () => {
+        sketchCanvas.current?.endDraw();
+    }
+
+    const undo = () => {
+        sketchCanvas.current?.undo();
+    }
+
+    const switchToDraw = () => {
+        setShowDrawView(true);
+    }
+
     return (
         <View style={styles.container}>
-            <View style={styles.header} >
+            { !showDrawView && <View style={styles.header} >
                 <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
-            </View>
-            <View style={styles.body}>
-                <View>
-                    <Canvas ref={handleCanvas} style={{ borderWidth: 1 }} />
+            </View>}
+            <View style={[styles.body, showDrawView && { paddingVertical: 0, justifyContent: 'center' }]}>
+                <View onTouchStart={drawStart} onTouchMove={drawLines} onTouchEnd={drawEnd} style={showDrawView && { transform: [{ scale: 1.5 }] }}>
+                    <Canvas ref={handleCanvas} style={[{ backgroundColor: 'black' }, showDrawView && { justifyContent: 'center', alignItems: 'center' }]} />
                     {texts}
                 </View>
-                <View style={styles.btns}>
+                {!showDrawView && <View style={styles.btns}>
                     <TouchableOpacity onPress={addText} style={styles.btn}>
                         <Feather name="type" size={30} color="black" />
                         <Text style={styles.btnText}>Insert Text</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={draw} style={styles.btn}>
+                    <TouchableOpacity onPress={switchToDraw} style={styles.btn}>
                         <MaterialCommunityIcons name="draw" size={30} color="black" />
                         <Text style={styles.btnText}>Draw</Text>
                     </TouchableOpacity>
-                </View>
+                </View>}
             </View>
-            <View style={{ flex: 2, margin: 20, backgroundColor: '#D4668E', borderRadius: 20 }}>
+            {!showDrawView && <View style={{ flex: 2, margin: 20, backgroundColor: '#D4668E', borderRadius: 20 }}>
                 <TouchableOpacity style={{ height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center' }} onPress={submit}>
                     <Text style={{ fontSize: 25 }}>Submit</Text>
                 </TouchableOpacity>
-
-            </View>
+            </View>}
         </View>
     )
 }
