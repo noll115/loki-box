@@ -1,14 +1,14 @@
-import { Dimensions, GestureResponderEvent, StatusBar, StyleSheet, Text, View } from 'react-native';
-import React, { forwardRef, useEffect, useRef, useState } from 'react'
+import { Dimensions, GestureResponderEvent, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useState } from 'react'
 import { RootState } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
-import Canvas from 'react-native-canvas'
 import { StackNavProp } from '../homeView/homeViewNav';
-import { TouchableOpacity, gestureHandlerRootHOC } from 'react-native-gesture-handler';
+import { TouchableOpacity, PanGestureHandlerGestureEvent, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import CanvasTextInput from './CanvasTextInput'
 import * as Orientation from "expo-screen-orientation";
-import { SketchCanvas } from './SketchCanvas';
+import { useSketchCanvas } from './SketchCanvas';
+import Svg, { Defs, Stop, LinearGradient, Rect } from 'react-native-svg';
+import Animated from 'react-native-reanimated';
 
 const mapState = (state: RootState) => ({
     user: state.user
@@ -22,132 +22,122 @@ const connector = connect(mapState, mapDispatch);
 type Props = ConnectedProps<typeof connector> & StackNavProp<'SendMessage'>
 
 
+
+function Canvasbtns() {
+    let [height, setHeight] = useState(0);
+
+    let stops = [];
+    stops.push('hsl(0, 100%, 0%)')
+    stops.push('hsl(0, 100%, 100%)')
+    for (let i = 0; i <= 360; i += 360 / 5) {
+        stops.push(`hsl(${i}, 100%, 50%)`)
+    }
+    let percentage = 100 / stops.length;
+    
+    let panHandler = ({ nativeEvent }: PanGestureHandlerGestureEvent) => {
+        let { y } = nativeEvent;
+        y = Math.min(Math.max(0, y),height)
+        switch (nativeEvent.state) {
+            case State.BEGAN:
+                break;
+            case State.ACTIVE:
+                console.log(y / height)
+                break;
+            case State.END:
+                break;
+        }
+    }
+
+    return (
+        <View style={{ position: 'absolute', right: 10, justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <PanGestureHandler
+                onGestureEvent={panHandler}
+                onHandlerStateChange={panHandler}
+            >
+                <Svg
+                    style={{ width: '30', height: '50%' }}
+                    onLayout={e => setHeight(e.nativeEvent.layout.height)}
+                >
+                    <Animated.View />
+                    <Defs>
+                        <LinearGradient id="grad" x1='0' x2='0' y1='0' y2='1'>
+                            {stops.map((col, i) => <Stop offset={`${i * percentage}%`} stopColor={col} />)}
+                        </LinearGradient>
+                    </Defs>
+                    <Rect height='100%' width='100%' fill='url(#grad)' />
+                </Svg>
+            </PanGestureHandler>
+        </View>
+    )
+}
+
 const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
     let { box } = route.params
-    let canvasRef = useRef<Canvas | null>(null)
-    let [texts, setTexts] = useState<JSX.Element[]>([]);
-    let textInputsRefs = useRef<Array<CanvasTextInput | null>>([]);
     let [showDrawView, setShowDrawView] = useState(false);
-    let sketchCanvas = useRef<SketchCanvas | null>(null);
+    let canvas = useSketchCanvas(320, 240);
 
     useEffect(() => {
         let unsub = navigation.addListener('beforeRemove', e => {
             if (showDrawView) {
                 e.preventDefault();
-                return setShowDrawView(false);
+                return Orientation.lockAsync(Orientation.OrientationLock.PORTRAIT)
+                    .then(() => {
+                        canvas.setLandScapeMode(false)
+                        setShowDrawView(false)
+                    });
             }
         })
         return unsub;
     }, [showDrawView])
 
     useEffect(() => {
-        if (showDrawView) {
-            Orientation.lockAsync(Orientation.OrientationLock.LANDSCAPE)
-                .then(() => sketchCanvas.current?.scaleView())
-        } else {
+        if (!showDrawView)
             Orientation.lockAsync(Orientation.OrientationLock.PORTRAIT)
-                .then(() => sketchCanvas.current?.scaleView())
-        }
     }, [showDrawView])
 
 
 
-    const handleCanvas = (canvas: Canvas) => {
-        if (canvas && !canvasRef.current) {
-            canvasRef.current = canvas;
-            sketchCanvas.current = new SketchCanvas(canvas);
-        }
-    }
 
-
-    const addText = () => {
-        let canvas = canvasRef.current;
-        if (canvas) {
-            textInputsRefs.current = [...textInputsRefs.current, null];
-            setTexts(prev => {
-                let newArr = [...prev,
-                <CanvasTextInput
-                    key={prev.length}
-                    ref={ref => textInputsRefs.current[prev.length] = ref}
-                    canvas={canvas!}
-                    canEdit={!showDrawView}
-                />
-                ];
-                return newArr
+    let switchOrientation = () =>
+        Orientation.lockAsync(Orientation.OrientationLock.LANDSCAPE)
+            .then(() => {
+                canvas.setLandScapeMode(true);
+                setShowDrawView(true);
             })
-        }
-    }
 
-    const submit = () => {
-        const ctx = canvasRef.current?.getContext('2d');
-        textInputsRefs.current.forEach(ref => {
-            let data = ref?.getInputData();
-            console.log(ref);
-
-            if (ctx && data) {
-                console.log(data);
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = 'white'
-                ctx.font = `${data.fontSize}px arial`;
-                ctx.fillText(data.text, data.pos.x, data.fontSize + data.pos.y)
-            }
-
-        });
-        setTexts([]);
-        textInputsRefs.current = [];
-    }
-
-
-    const drawStart = (e: GestureResponderEvent) => {
-        let { locationX: x, locationY: y } = e.nativeEvent;
-        if (showDrawView)
-            sketchCanvas.current?.startDraw({ x, y });
-    }
-
-    const drawLines = (e: GestureResponderEvent) => {
-        let { locationX: x, locationY: y } = e.nativeEvent;
-        e.preventDefault();
-        if (showDrawView)
-            sketchCanvas.current?.draw({ x, y });
-    }
-    const drawEnd = () => {
-        sketchCanvas.current?.endDraw();
-    }
-
-    const undo = () => {
-        sketchCanvas.current?.undo();
-    }
-
-    const switchToDraw = () => {
-        setShowDrawView(true);
-    }
 
     return (
         <View style={styles.container}>
-            { !showDrawView && <View style={styles.header} >
-                <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
-            </View>}
-            <View style={[styles.body, showDrawView && { paddingVertical: 0, justifyContent: 'center' }]}>
-                <View onTouchStart={drawStart} onTouchMove={drawLines} onTouchEnd={drawEnd} style={showDrawView && { transform: [{ scale: 1.5 }] }}>
-                    <Canvas ref={handleCanvas} style={[{ backgroundColor: 'black' }, showDrawView && { justifyContent: 'center', alignItems: 'center' }]} />
-                    {texts}
+            {showDrawView && <Canvasbtns />}
+            {!showDrawView &&
+                <View style={styles.header} >
+                    <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
                 </View>
-                {!showDrawView && <View style={styles.btns}>
-                    <TouchableOpacity onPress={addText} style={styles.btn}>
-                        <Feather name="type" size={30} color="black" />
-                        <Text style={styles.btnText}>Insert Text</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={switchToDraw} style={styles.btn}>
-                        <MaterialCommunityIcons name="draw" size={30} color="black" />
-                        <Text style={styles.btnText}>Draw</Text>
-                    </TouchableOpacity>
-                </View>}
+            }
+            <View style={[styles.body, showDrawView && { paddingVertical: 0, justifyContent: 'center' }]}>
+                <View >
+                    {canvas.render}
+                </View>
+                {!showDrawView &&
+                    <View style={styles.btns}>
+                        <TouchableOpacity onPress={canvas.addText} style={styles.btn}>
+                            <Feather name="type" size={30} color="black" />
+                            <Text style={styles.btnText}>Insert Text</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={switchOrientation} style={styles.btn}>
+                            <MaterialCommunityIcons name="draw" size={30} color="black" />
+                            <Text style={styles.btnText}>Draw</Text>
+                        </TouchableOpacity>
+                    </View>
+                }
             </View>
-            {!showDrawView && <View style={{ flex: 2, margin: 20, backgroundColor: '#D4668E', borderRadius: 20 }}>
-                <TouchableOpacity style={{ height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center' }} onPress={submit}>
-                    <Text style={{ fontSize: 25 }}>Submit</Text>
-                </TouchableOpacity>
-            </View>}
+            {!showDrawView &&
+                <View style={{ flex: 2, margin: 20, backgroundColor: '#D4668E', borderRadius: 20 }}>
+                    <TouchableOpacity style={{ height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center' }} onPress={canvas.submit}>
+                        <Text style={{ fontSize: 25 }}>Submit</Text>
+                    </TouchableOpacity>
+                </View>
+            }
         </View>
     )
 }

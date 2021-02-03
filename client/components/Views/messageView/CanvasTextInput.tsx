@@ -6,16 +6,13 @@ import Animated, {
     eq,
     set,
     useValue,
-    debug,
     call,
-    multiply,
     lessThan,
     max,
     sub,
     min,
 } from 'react-native-reanimated'
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import Canvas from 'react-native-canvas';
 import {
     LongPressGestureHandler,
     PanGestureHandler,
@@ -23,75 +20,55 @@ import {
     State,
 } from 'react-native-gesture-handler';
 
+import { TextData } from "./SketchCanvas";
 
 
+
+
+
+interface MsgProps {
+    textData: TextData,
+    canvasWidth: number,
+    canvasHeight: number,
+    index: number,
+    isDrawing: boolean,
+    changeData: (newData: TextData, index: number) => void
+}
 const MIN_FONT_SIZE = 23
 const MAX_FONT_SIZE = 60
 
-interface MsgProps {
-    canvas: Canvas,
-    canEdit: boolean
-}
-
-interface CanvasTextInput {
-    getInputData(): {
-        text: string,
-        fontSize: number
-    } & CanvasInputData
-}
-
-interface CanvasInputData {
-    width: number,
-    height: number,
-    fontSize: number,
-    pos: { x: number, y: number }
-}
 
 const AnimTextInput = Animated.createAnimatedComponent(TextInput);
-const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps> = ({ canvas, canEdit }, ref) => {
-    let [text, setText] = useState('');
+const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, isDrawing, changeData }) => {
+
+
+    let [text, setText] = useState(textData.text);
     let textRef = useRef<any | null>(null);
-    let [editable, setEditable] = useState(true);
+    let [editable, setEditable] = useState(textData.new);
     let pressGesRef = useRef<LongPressGestureHandler | null>(null);
     let panGesRef = useRef<PanGestureHandler | null>(null);
     let pinchGesRef = useRef<PinchGestureHandler | null>(null);
-    
-    let data = useRef<CanvasInputData>({
-        width: MIN_FONT_SIZE,
-        height: MIN_FONT_SIZE,
-        fontSize: MIN_FONT_SIZE,
-        pos: { x: (canvas.width / 2) - MIN_FONT_SIZE / 2, y: (canvas.height / 2) - MIN_FONT_SIZE / 2 }
-    })
+
+
     let textWidth = useValue(0);
     let textHeight = useValue(0);
 
     let pinchScale = useValue(1);
-    let baseScale = useValue(MIN_FONT_SIZE);
+    let baseScale = useValue(textData.fontSize);
     let finalScale = min(max(Animated.multiply(pinchScale, baseScale), MIN_FONT_SIZE), MAX_FONT_SIZE);
     let heldLong = useValue(0);
     let dragX = useValue(0);
     let dragY = useValue(0);
-    let offsetX = useValue(data.current.pos.x);
-    let offsetY = useValue(data.current.pos.y);
+    let offsetX = useValue(textData.pos.x);
+    let offsetY = useValue(textData.pos.y);
     let gestureState = useValue(-1);
+
 
     useEffect(() => {
         if (editable && textRef.current) {
             textRef.current.getNode().focus()
-
         }
     }, [editable, textRef])
-
-
-    useImperativeHandle(ref, () => ({
-        getInputData: () => ({
-            text,
-            pos: data.current.pos,
-            fontSize: data.current.fontSize,
-            height: data.current.height,
-            width: data.current.width
-        })
-    }))
 
 
     let enableEditable = () => {
@@ -103,7 +80,7 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
         nativeEvent: ({ state, numberOfPointers }: any) => cond(
             eq(state, State.ACTIVE),
             [
-                debug('held', set(heldLong, 1)),
+                set(heldLong, 1),
             ],
             cond(and(eq(state, State.FAILED), lessThan(numberOfPointers, 2)),
                 [
@@ -112,10 +89,10 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
             )
         )
 
-    }], { useNativeDriver: true })
+    }])
 
     let updatePos = ([x, y]: readonly number[]) => {
-        data.current.pos = { x, y }
+        changeData({ ...textData, pos: { x, y } }, index)
     }
 
     let onGesturePan = Animated.event([
@@ -131,14 +108,14 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
                             cond(
                                 eq(gestureState, State.ACTIVE),
                                 [
-                                    set(offsetX, min(max(0, add(offsetX, dragX)), sub(canvas.width, textWidth))),
-                                    set(offsetY, min(max(0, add(offsetY, dragY)), sub(canvas.height, textHeight))),
+                                    set(offsetX, min(max(0, add(offsetX, dragX)), sub(canvasWidth, textWidth))),
+                                    set(offsetY, min(max(0, add(offsetY, dragY)), sub(canvasHeight, textHeight))),
                                 ]
                             ),
                             set(gestureState, 0),
-                            debug('stop held', set(heldLong, 0)),
-                            set(offsetX, min(max(0, offsetX), sub(canvas.width, textWidth))),
-                            set(offsetY, min(max(0, offsetY), sub(canvas.height, textHeight))),
+                            set(heldLong, 0),
+                            set(offsetX, min(max(0, offsetX), sub(canvasWidth, textWidth))),
+                            set(offsetY, min(max(0, offsetY), sub(canvasHeight, textHeight))),
                             call([offsetX, offsetY], updatePos)
                         ]
                     )
@@ -147,7 +124,9 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
         },
     ]);
 
-    let setScale = ([scale]: readonly number[]) => { data.current.fontSize = scale }
+    let setScale = ([scale]: readonly number[]) => {
+        changeData({ ...textData, fontSize: scale }, index)
+    }
 
     let onPinchGest = Animated.event([{
         nativeEvent: ({ state, scale }: any) => cond(
@@ -168,12 +147,12 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
 
     let moveX = cond(
         eq(gestureState, State.ACTIVE),
-        min(max(0, add(offsetX, dragX)), sub(canvas.width, textWidth)),
+        min(max(0, add(offsetX, dragX)), sub(canvasWidth, textWidth)),
         offsetX
     );
     let moveY = cond(
         eq(gestureState, State.ACTIVE),
-        min(max(0, add(offsetY, dragY)), sub(canvas.height, textHeight)),
+        min(max(0, add(offsetY, dragY)), sub(canvasHeight, textHeight)),
         offsetY
     );
 
@@ -187,8 +166,10 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
         moveY,
         offsetY
     )
-
-
+    let changeEdit = () => {
+        setEditable(false);
+        changeData({ ...textData, text, new: false }, index);
+    }
     return (
         <LongPressGestureHandler
             ref={pressGesRef}
@@ -196,7 +177,7 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
             minDurationMs={1000}
             maxDist={10}
             waitFor={pinchGesRef}
-            enabled={!editable}
+            enabled={!editable && !isDrawing}
         >
             <Animated.View style={{
                 position: 'absolute',
@@ -214,19 +195,17 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
                         let height = nativeEvent.layout.height;
                         textHeight.setValue(height);
                         textWidth.setValue(width);
-                        data.current.width = width;
-                        data.current.height = height;
                     }}
                     value={text}
                     textAlign='center'
                     editable={editable}
                     maxLength={15}
                     autoFocus
-                    onBlur={(e: any) => setEditable(false)}
-                    onEndEditing={(e: any) => setEditable(false)}
+                    onBlur={changeEdit}
+                    onEndEditing={changeEdit}
                     ref={textRef}
                     onChangeText={(e: any) => setText(e)}
-                    style={{ color: 'white', fontSize: finalScale, maxWidth: canvas.width - 10, maxHeight: canvas.height - 10 }} />
+                    style={{ color: 'white', fontSize: finalScale, maxWidth: canvasWidth - 10, maxHeight: canvasHeight - 10 }} />
 
                 <PinchGestureHandler
                     ref={pinchGesRef}
@@ -234,7 +213,7 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
                     onGestureEvent={onPinchGest}
                     onHandlerStateChange={onPinchGest}
                     hitSlop={100}
-                    enabled={!editable}
+                    enabled={!editable && !isDrawing}
                 >
                     <Animated.View style={{ ...StyleSheet.absoluteFillObject }} />
                 </PinchGestureHandler>
@@ -245,7 +224,7 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
                     onGestureEvent={onGesturePan}
                     waitFor={pressGesRef}
                     maxPointers={1}
-                    enabled={!editable}
+                    enabled={!editable && !isDrawing}
                 >
                     <Animated.View style={{ ...StyleSheet.absoluteFillObject }} />
                 </PanGestureHandler >
@@ -255,5 +234,5 @@ const _CanvasTextInput: React.ForwardRefRenderFunction<CanvasTextInput, MsgProps
 
 }
 
-const CanvasTextInput = forwardRef(_CanvasTextInput);
+const CanvasTextInput = _CanvasTextInput;
 export default CanvasTextInput; 

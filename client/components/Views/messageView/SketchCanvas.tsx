@@ -1,123 +1,140 @@
-import { Dimensions, GestureResponderEvent } from "react-native";
-import Canvas, { CanvasRenderingContext2D } from "react-native-canvas";
-
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { GestureResponderEvent, PanResponder, useWindowDimensions } from "react-native";
+import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
+import Svg, { Path, Text } from 'react-native-svg'
+import CanvasTextInput from "./CanvasTextInput";
 interface Point {
     x: number,
     y: number
 }
 
-class Line {
+interface Line {
     color: string
     points: Point[]
     lineWidth: number
-    constructor(color: string, lineWidth: number) {
-        this.points = []
-        this.color = color
-        this.lineWidth = lineWidth;
-    }
-
-    changeLineWidth(lineWidth: number) {
-        this.lineWidth = lineWidth;
-    }
-
-    changeColor(color: string) {
-        this.color = color;
-    }
-
-
-    redraw(ctx: CanvasRenderingContext2D) {
-        this.drawStart(ctx);
-        ctx.beginPath();
-        ctx.moveTo(this.points[0].x, this.points[0].y);
-        for (let i = 1; i < this.points.length; i++) {
-            const point = this.points[i];
-            ctx.lineTo(point.x, point.y);
-        }
-        ctx.stroke();
-    }
-
-    drawStart(ctx: CanvasRenderingContext2D) {
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = this.lineWidth;
-    }
-
-
-    draw(mousePoint: Point, ctx: CanvasRenderingContext2D) {
-        this.points.push(mousePoint);
-        ctx.lineTo(mousePoint.x, mousePoint.y);
-    }
-
 }
 
-export class SketchCanvas {
-    lines: Line[]
-    currentLine!: Line
-    selectedColor: string
-    ctx: CanvasRenderingContext2D
-    lineWidth: number
-    constructor(private canvas: Canvas) {
-        this.selectedColor = 'white'
-        this.lines = [];
-        this.ctx = canvas.getContext('2d');
-        this.lineWidth = 12;
-        canvas.width = 320;
-        canvas.height = 240;
-        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-        this.ctx.lineCap = 'round'
-        this.ctx.lineWidth = this.lineWidth;
+export interface TextData {
+    text: string,
+    fontSize: number,
+    pos: Point,
+    new: boolean
+}
+
+const FONT_SIZE = 23;
+
+export function useSketchCanvas(width: number, height: number) {
+    const [lines, setLines] = useState<Line[]>([]);
+    const [drawing, setDrawing] = useState(false);
+    const [color, setColor] = useState('white');
+    const [lineWidth, setLineWidth] = useState(12);
+    const [landScapeMode, setLandScapeMode] = useState(false);
+    let [texts, setTexts] = useState<TextData[]>([]);
+    let [scale, setScale] = useState(1);
+    const window = useWindowDimensions()
+
+    useEffect(() => {
+        if (landScapeMode) {
+            let scale = window.height / height;
+            setScale(scale)
+        } else if (scale !== 1) {
+            setScale(1)
+        }
+    }, [landScapeMode, window])
+
+
+    const addText = () => {
+        let newText = {
+            text: '',
+            fontSize: FONT_SIZE,
+            pos: {
+                x: width / 2 - FONT_SIZE,
+                y: height / 2 - FONT_SIZE
+            },
+            new: true
+        };
+        setTexts(prevState => [...prevState, newText])
     }
 
-    changeColor(newCol: string) {
-        this.selectedColor = newCol;
-        this.currentLine.changeColor(newCol);
+
+    const submit = () => {
+
+        // if (ctx && data) {
+        //     console.log(data);
+        //     ctx.fillStyle = 'white';
+        //     ctx.strokeStyle = 'white'
+        //     ctx.font = `${data.fontSize}px arial`;
+        //     ctx.fillText(data.text, data.pos.x, data.fontSize + data.pos.y)
+        // }
+
     }
 
-    startDraw(beginPoint: Point) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(beginPoint.x, beginPoint.y);
-        this.currentLine = new Line(this.selectedColor, this.lineWidth);
-        this.currentLine.drawStart(this.ctx);
-    }
-
-    draw(mousePoint: Point) {
-        this.currentLine.draw(mousePoint, this.ctx);
-        this.ctx.stroke();
-    }
-
-    endDraw() {
-        this.lines.push(this.currentLine);
-        this.ctx.stroke();
-    }
-
-    undo() {
-        this.lines.pop();
-        this.clearCanvas();
-        for (const line of this.lines) {
-            line.redraw(this.ctx);
+    let handlePanGesture = ({ nativeEvent }: PanGestureHandlerGestureEvent) => {
+        let { x, y } = nativeEvent
+        switch (nativeEvent.state) {
+            case State.BEGAN:
+                setLines(prevState => [...prevState, { color, lineWidth, points: [{ x, y }] }])
+                setDrawing(true)
+                break;
+            case State.ACTIVE:
+                if (!drawing)
+                    return
+                x = Math.min(Math.max(0, x), width)
+                y = Math.min(Math.max(0, y), height)
+                setLines(prevState => {
+                    let line = prevState.pop()!;
+                    return [...prevState, { ...line, points: [...line?.points, { x, y }] }]
+                })
+                break;
+            case State.END:
+                setDrawing(false);
+                break;
         }
     }
 
-    clearCanvas() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        new Path2D();
-        
+    let changeData = (newData: TextData, index: number) => {
+        setTexts(prevState => {
+            let newState = [...prevState];
+            newState[index] = newData;
+            return newState;
+        })
     }
+    console.log('rerender');
 
-
-    reset() {
-        this.lines = [];
-        this.clearCanvas();
+    let canvas = {
+        render: (
+            <PanGestureHandler maxPointers={1}
+                onHandlerStateChange={handlePanGesture}
+                onGestureEvent={handlePanGesture}
+                enabled={landScapeMode}
+            >
+                <Svg
+                    style={{
+                        backgroundColor: 'black',
+                        height: height,
+                        width: width,
+                        transform: [{ scale }]
+                    }}
+                >
+                    {
+                        lines.map((line, i) => <Path
+                            key={i}
+                            d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+                            strokeWidth={line.lineWidth}
+                            strokeLinecap="round"
+                            stroke={color}
+                        />)
+                    }
+                    {texts.map((textData, i) => <CanvasTextInput isDrawing={landScapeMode} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />
+                    )}
+                </Svg>
+            </PanGestureHandler>
+        ),
+        setLineWidth,
+        setColor,
+        setLandScapeMode,
+        addText,
+        submit
     }
-
-    scaleView() {
-        let { height, width } = Dimensions.get('window');
-        console.log(height, width);
-    }
-
-    addText(texts: JSX.Element[]) {
-
-    }
-
-
-
+    return canvas;
 }

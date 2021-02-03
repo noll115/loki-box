@@ -25,8 +25,6 @@ type Props = ConnectedProps<typeof connector> & StackNavProp<'Home'>
 const Stack = createStackNavigator<HomeViewTabParamList>();
 
 
-
-
 const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) => {
 
     useEffect(() => {

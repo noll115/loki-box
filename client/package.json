@@ -34,7 +34,9 @@
     "redux-thunk": "^2.3.0",
     "socket.io-client": "^3.1.0",
     "validator": "^13.5.2",
-    "expo-screen-orientation": "~2.1.0"
+    "expo-screen-orientation": "~2.1.0",
+    "react-native-svg": "12.1.0",
+    "expo-linear-gradient": "~8.4.0"
   },
   "devDependencies": {
     "@babel/core": "~7.9.0",
