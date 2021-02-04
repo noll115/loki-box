@@ -18,29 +18,25 @@ export interface TextData {
     text: string,
     fontSize: number,
     pos: Point,
+    color: string,
     new: boolean
 }
 
 const FONT_SIZE = 23;
 
-export function useSketchCanvas(width: number, height: number) {
+export function useSketchCanvas(width: number, height: number, bannerHeight: number) {
     const [lines, setLines] = useState<Line[]>([]);
     const [drawing, setDrawing] = useState(false);
-    const [color, setColor] = useState('white');
+    const [color, setColor] = useState('#FFFFFF');
     const [lineWidth, setLineWidth] = useState(12);
-    const [landScapeMode, setLandScapeMode] = useState(false);
     let [texts, setTexts] = useState<TextData[]>([]);
     let [scale, setScale] = useState(1);
     const window = useWindowDimensions()
 
     useEffect(() => {
-        if (landScapeMode) {
-            let scale = window.height / height;
-            setScale(scale)
-        } else if (scale !== 1) {
-            setScale(1)
-        }
-    }, [landScapeMode, window])
+        let scale = (window.height - bannerHeight * 1.5) / height;
+        setScale(scale)
+    }, [bannerHeight, window])
 
 
     const addText = () => {
@@ -51,6 +47,7 @@ export function useSketchCanvas(width: number, height: number) {
                 x: width / 2 - FONT_SIZE,
                 y: height / 2 - FONT_SIZE
             },
+            color,
             new: true
         };
         setTexts(prevState => [...prevState, newText])
@@ -99,14 +96,12 @@ export function useSketchCanvas(width: number, height: number) {
             return newState;
         })
     }
-    console.log('rerender');
 
     let canvas = {
         render: (
             <PanGestureHandler maxPointers={1}
                 onHandlerStateChange={handlePanGesture}
                 onGestureEvent={handlePanGesture}
-                enabled={landScapeMode}
             >
                 <Svg
                     style={{
@@ -125,14 +120,13 @@ export function useSketchCanvas(width: number, height: number) {
                             stroke={color}
                         />)
                     }
-                    {texts.map((textData, i) => <CanvasTextInput isDrawing={landScapeMode} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />
+                    {texts.map((textData, i) => <CanvasTextInput isDrawing={true} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />
                     )}
                 </Svg>
             </PanGestureHandler>
         ),
         setLineWidth,
         setColor,
-        setLandScapeMode,
         addText,
         submit
     }

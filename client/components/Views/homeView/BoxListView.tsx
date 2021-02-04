@@ -111,11 +111,11 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
                 {boxMessages}
             </ScrollView>
             <View style={{ flexDirection: 'row', position: 'absolute', width: '100%', height: 70, bottom: '4%', paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center' }}>
-                <Button title='Send a Message' onPress={() => {
+                {selectedBox && <Button title='Send a Message' onPress={() => {
                     navigation.navigate('SendMessage', {
                         box: selectedBox!
                     })
-                }} btnStyle={{ flex: 1, marginHorizontal: 20 }} />
+                }} btnStyle={{ flex: 1, marginHorizontal: 20 }} />}
             </View>
             <QRScanner onScan={OnScanBox} showCam={viewCam} onClose={OnCloseScanner} />
             <DrawerMenu btns={drawerMenuBtns} />

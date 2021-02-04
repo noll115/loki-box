@@ -22,6 +22,9 @@ let redisSocket = new RedisSocket(redisClient);
 io.adapter(adapter)
 let nameSpaces: NameSpaces = { user: io.of("/user"), box: io.of("/box") }
 
+app.get("/", (req, res) => {
+    res.send('test')
+})
 app.use(express.json())
 app.use(passport.initialize())
 

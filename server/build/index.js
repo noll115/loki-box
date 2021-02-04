@@ -20,6 +20,9 @@ var _a = redis_1.createRedisAdapter(), adapter = _a.adapter, redisClient = _a.re
 var redisSocket = new redis_1.RedisSocket(redisClient);
 io.adapter(adapter);
 var nameSpaces = { user: io.of("/user"), box: io.of("/box") };
+app.get("/", function (req, res) {
+    res.send('test');
+});
 app.use(express_1.default.json());
 app.use(passport_1.default.initialize());
 app.use("/user", userRoute_1.default(passport_1.default, redisSocket, nameSpaces));

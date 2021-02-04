@@ -196,6 +196,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                         textHeight.setValue(height);
                         textWidth.setValue(width);
                     }}
+
                     value={text}
                     textAlign='center'
                     editable={editable}
@@ -205,7 +206,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                     onEndEditing={changeEdit}
                     ref={textRef}
                     onChangeText={(e: any) => setText(e)}
-                    style={{ color: 'white', fontSize: finalScale, maxWidth: canvasWidth - 10, maxHeight: canvasHeight - 10 }} />
+                    style={{ color: (editable ? 'black' : textData.color), fontSize: finalScale, maxWidth: canvasWidth - 10, maxHeight: canvasHeight - 10 }} />
 
                 <PinchGestureHandler
                     ref={pinchGesRef}

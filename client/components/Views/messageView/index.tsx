@@ -1,14 +1,175 @@
 import { Dimensions, GestureResponderEvent, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { RootState } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../homeView/homeViewNav';
 import { TouchableOpacity, PanGestureHandlerGestureEvent, PanGestureHandler, State } from 'react-native-gesture-handler';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Orientation from "expo-screen-orientation";
 import { useSketchCanvas } from './SketchCanvas';
-import Svg, { Defs, Stop, LinearGradient, Rect } from 'react-native-svg';
-import Animated from 'react-native-reanimated';
+import Svg, { Rect } from 'react-native-svg';
+import Animated, { block, call, cond, debug, divide, eq, interpolateColors, max, min, multiply, not, set, sub, useValue } from 'react-native-reanimated';
+import { LinearGradient } from "expo-linear-gradient";
+
+
+
+let selectorSize = 50
+
+interface canvasBtnProps {
+    setColor(newCol: string): void
+}
+
+const Canvasbtns: React.FC<canvasBtnProps> = ({ setColor }) => {
+    let height = useValue(30);
+    let selectorOpacity = useValue(2);
+    let stops = [];
+    let inputs: number[] = [];
+    let transY = useValue(-20);
+    for (let i = 0; i <= 360; i += 360 / 6) {
+        stops.push(`hsl(${i}, 100%, 50%)`)
+        inputs.push(i / 360)
+    }
+    let color = interpolateColors(divide(transY, height), {
+        inputRange: inputs,
+        outputColorRange: stops,
+    })
+    let changeColor = ([col]: readonly number[]) => {
+        setColor("#" + (col & 0x00FFFFFF).toString(16).padStart(6, '0'))
+    }
+    let panHandler = Animated.event([
+        {
+            nativeEvent: ({ state, y }: any) => block([
+                set(transY, min(max(y, 0), height)),
+                cond(eq(state, State.END),
+                    call([color], changeColor)
+                ),
+                cond(eq(state, State.BEGAN),
+                    set(selectorOpacity, 1)
+                )
+            ])
+        },
+    ]);
+
+    return (
+        <View style={canvasBtnStyle.container}>
+            <PanGestureHandler
+                onGestureEvent={panHandler}
+                onHandlerStateChange={panHandler}
+            >
+                <Animated.View
+                    onLayout={e => height.setValue(e.nativeEvent.layout.height as any)}
+                    style={canvasBtnStyle.slider}>
+                    <LinearGradient
+                        style={canvasBtnStyle.grad}
+                        colors={stops}
+
+                    />
+                    <Animated.View style={[canvasBtnStyle.selector, { transform: [{ translateY: sub(transY, 25) }] }, {
+                        opacity: selectorOpacity.interpolate({
+                            inputRange: [0, 1, 2, 3],
+                            outputRange: [0, 1, 0, 0]
+                        })
+                    }]} >
+                        <View style={canvasBtnStyle.pointer} />
+                        <Animated.View style={[canvasBtnStyle.selectorInner, { backgroundColor: color as any }]} />
+                    </Animated.View>
+                </Animated.View>
+            </PanGestureHandler>
+            <View
+                style={{ width: 30, height: '10%', marginTop: 10, justifyContent: 'center', alignItems: 'center' }}
+            >
+                <Svg
+                    onPress={() => {
+                        selectorOpacity.setValue(2 as any);
+                        setColor('#FFFFFF')
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                >
+                    <Rect height='100%' width='100%' fill='white' />
+
+                </Svg>
+                <Animated.View style={[canvasBtnStyle.selector, {
+                    opacity: selectorOpacity.interpolate({
+                        inputRange: [0, 1, 2, 3],
+                        outputRange: [0, 0, 1, 0]
+                    })
+                }]}
+                >
+                    <View style={canvasBtnStyle.pointer} />
+                    <Animated.View style={[canvasBtnStyle.selectorInner, { backgroundColor: 'white' }]} />
+                </Animated.View>
+            </View >
+            <View
+                style={{ width: 30, height: '10%', marginTop: 10, justifyContent: 'center', alignItems: 'center' }}
+            >
+                <Svg
+                    onPress={() => {
+                        selectorOpacity.setValue(3 as any);
+                        setColor('#000000')
+
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                >
+                    <Rect height='100%' width='100%' fill='black' />
+
+                </Svg>
+                <Animated.View style={[canvasBtnStyle.selector, {
+                    opacity: selectorOpacity.interpolate({
+                        inputRange: [0, 1, 2, 3],
+                        outputRange: [0, 0, 0, 1]
+                    })
+                }]}
+                >
+                    <View style={canvasBtnStyle.pointer} />
+                    <Animated.View style={[canvasBtnStyle.selectorInner, { backgroundColor: 'black' }]} />
+                </Animated.View>
+            </View >
+        </View >
+    )
+}
+
+const canvasBtnStyle = StyleSheet.create({
+    container: {
+        position: 'absolute',
+        right: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%'
+    },
+    slider: {
+        width: 30,
+        height: '50%'
+    },
+    grad: {
+        height: '100%',
+        width: '100%'
+    },
+    selector: {
+        width: 50,
+        height: 50,
+        position: 'absolute',
+        left: -60,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'grey',
+        borderRadius: 25
+    },
+    selectorInner: {
+        width: '90%',
+        height: '90%',
+        borderRadius: 25
+    },
+    pointer: {
+        position: 'absolute',
+        width: 20,
+        height: 20,
+        transform: [{ translateX: 19 }, { rotateZ: '45deg' }],
+        backgroundColor: 'grey'
+    }
+})
+
+
+
+
 
 const mapState = (state: RootState) => ({
     user: state.user
@@ -20,125 +181,38 @@ const mapDispatch = {
 const connector = connect(mapState, mapDispatch);
 
 type Props = ConnectedProps<typeof connector> & StackNavProp<'SendMessage'>
-
-
-
-function Canvasbtns() {
-    let [height, setHeight] = useState(0);
-
-    let stops = [];
-    stops.push('hsl(0, 100%, 0%)')
-    stops.push('hsl(0, 100%, 100%)')
-    for (let i = 0; i <= 360; i += 360 / 5) {
-        stops.push(`hsl(${i}, 100%, 50%)`)
-    }
-    let percentage = 100 / stops.length;
-    
-    let panHandler = ({ nativeEvent }: PanGestureHandlerGestureEvent) => {
-        let { y } = nativeEvent;
-        y = Math.min(Math.max(0, y),height)
-        switch (nativeEvent.state) {
-            case State.BEGAN:
-                break;
-            case State.ACTIVE:
-                console.log(y / height)
-                break;
-            case State.END:
-                break;
-        }
-    }
-
-    return (
-        <View style={{ position: 'absolute', right: 10, justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <PanGestureHandler
-                onGestureEvent={panHandler}
-                onHandlerStateChange={panHandler}
-            >
-                <Svg
-                    style={{ width: '30', height: '50%' }}
-                    onLayout={e => setHeight(e.nativeEvent.layout.height)}
-                >
-                    <Animated.View />
-                    <Defs>
-                        <LinearGradient id="grad" x1='0' x2='0' y1='0' y2='1'>
-                            {stops.map((col, i) => <Stop offset={`${i * percentage}%`} stopColor={col} />)}
-                        </LinearGradient>
-                    </Defs>
-                    <Rect height='100%' width='100%' fill='url(#grad)' />
-                </Svg>
-            </PanGestureHandler>
-        </View>
-    )
-}
-
 const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
     let { box } = route.params
-    let [showDrawView, setShowDrawView] = useState(false);
-    let canvas = useSketchCanvas(320, 240);
-
+    let [bannerHeight, setBannerHeight] = useState(0);
+    let canvas = useSketchCanvas(320, 240, bannerHeight);
     useEffect(() => {
-        let unsub = navigation.addListener('beforeRemove', e => {
-            if (showDrawView) {
-                e.preventDefault();
-                return Orientation.lockAsync(Orientation.OrientationLock.PORTRAIT)
-                    .then(() => {
-                        canvas.setLandScapeMode(false)
-                        setShowDrawView(false)
-                    });
-            }
+        let unsubFocus = navigation.addListener('focus', e => {
+            Orientation.lockAsync(Orientation.OrientationLock.LANDSCAPE)
         })
-        return unsub;
-    }, [showDrawView])
+        let unsubBeforeRem = navigation.addListener('beforeRemove', () => {
 
-    useEffect(() => {
-        if (!showDrawView)
             Orientation.lockAsync(Orientation.OrientationLock.PORTRAIT)
-    }, [showDrawView])
+        })
+        return () => {
+            unsubFocus();
+            unsubBeforeRem();
+        };
+    }, [])
 
-
-
-
-    let switchOrientation = () =>
-        Orientation.lockAsync(Orientation.OrientationLock.LANDSCAPE)
-            .then(() => {
-                canvas.setLandScapeMode(true);
-                setShowDrawView(true);
-            })
-
+    let CanvasBtn = useMemo(() => <Canvasbtns setColor={canvas.setColor} />, [])
 
     return (
         <View style={styles.container}>
-            {showDrawView && <Canvasbtns />}
-            {!showDrawView &&
-                <View style={styles.header} >
-                    <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
-                </View>
-            }
-            <View style={[styles.body, showDrawView && { paddingVertical: 0, justifyContent: 'center' }]}>
-                <View >
-                    {canvas.render}
-                </View>
-                {!showDrawView &&
-                    <View style={styles.btns}>
-                        <TouchableOpacity onPress={canvas.addText} style={styles.btn}>
-                            <Feather name="type" size={30} color="black" />
-                            <Text style={styles.btnText}>Insert Text</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={switchOrientation} style={styles.btn}>
-                            <MaterialCommunityIcons name="draw" size={30} color="black" />
-                            <Text style={styles.btnText}>Draw</Text>
-                        </TouchableOpacity>
-                    </View>
-                }
+            <View style={styles.header}
+                onLayout={({ nativeEvent }) => setBannerHeight(nativeEvent.layout.height)}
+            >
+                <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
             </View>
-            {!showDrawView &&
-                <View style={{ flex: 2, margin: 20, backgroundColor: '#D4668E', borderRadius: 20 }}>
-                    <TouchableOpacity style={{ height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center' }} onPress={canvas.submit}>
-                        <Text style={{ fontSize: 25 }}>Submit</Text>
-                    </TouchableOpacity>
-                </View>
-            }
-        </View>
+            <View style={styles.body}>
+                {canvas.render}
+                {CanvasBtn}
+            </View>
+        </View >
     )
 }
 
@@ -157,16 +231,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'flex-end',
-        paddingBottom: 20
+        paddingBottom: 10
     },
     headerText: {
         fontSize: 24,
         color: '#FEF4EA',
     },
     body: {
-        paddingVertical: '3%',
         flex: 15,
         alignItems: 'center',
+        justifyContent: 'center'
     },
     btns: {
         flexDirection: 'row',
