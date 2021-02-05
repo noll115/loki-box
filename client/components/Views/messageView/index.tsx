@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
         color: '#FEF4EA',
     },
     body: {
-        paddingTop: '15%',
+        paddingTop: '8%',
         flex: 15,
         alignItems: 'center',
     },

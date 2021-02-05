@@ -132,10 +132,8 @@ passport_1.default.use("login", new passport_local_1.Strategy({
 function SocketVerifyUserJWT(socket, next) {
     var userSocket = socket;
     passport_1.default.authenticate('user-jwt', { session: false }, function (err, user, info) {
-        if (err)
-            return next(err);
-        if (!user)
-            return next(new Error(info.message));
+        if (!user || err)
+            return userSocket.emit('jwt failed');
         console.log(user);
         userSocket.user = user;
         next();
@@ -145,10 +143,8 @@ exports.SocketVerifyUserJWT = SocketVerifyUserJWT;
 function SocketVerifyBoxJWT(socket, next) {
     var boxSocket = socket;
     passport_1.default.authenticate('box-jwt', { session: false }, function (err, box, info) {
-        if (err)
-            return next(err);
-        if (!box)
-            return next(new Error(info.message));
+        if (!box || err)
+            return boxSocket.emit('jwt failed');
         console.log(box);
         boxSocket.box = box;
         next();
