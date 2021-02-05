@@ -11,6 +11,8 @@ import Animated, {
     max,
     sub,
     min,
+    debug,
+    block,
 } from 'react-native-reanimated'
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import {
@@ -32,31 +34,29 @@ interface MsgProps {
     canvasHeight: number,
     index: number,
     isDrawing: boolean,
-    changeData: (newData: TextData, index: number) => void
+    changeData: (removeText: boolean, index: number, newData?: TextData) => void,
+    onSelected: ((index: number) => void) | undefined
 }
 const MIN_FONT_SIZE = 23
 const MAX_FONT_SIZE = 60
 
 
 const AnimTextInput = Animated.createAnimatedComponent(TextInput);
-const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, isDrawing, changeData }) => {
+const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, isDrawing, changeData, onSelected }) => {
 
 
     let [text, setText] = useState(textData.text);
     let textRef = useRef<any | null>(null);
     let [editable, setEditable] = useState(textData.new);
-    let pressGesRef = useRef<LongPressGestureHandler | null>(null);
     let panGesRef = useRef<PanGestureHandler | null>(null);
     let pinchGesRef = useRef<PinchGestureHandler | null>(null);
 
 
     let textWidth = useValue(0);
     let textHeight = useValue(0);
-
     let pinchScale = useValue(1);
     let baseScale = useValue(textData.fontSize);
     let finalScale = min(max(Animated.multiply(pinchScale, baseScale), MIN_FONT_SIZE), MAX_FONT_SIZE);
-    let heldLong = useValue(0);
     let dragX = useValue(0);
     let dragY = useValue(0);
     let offsetX = useValue(textData.pos.x);
@@ -75,24 +75,8 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
         setEditable(true);
     }
 
-
-    const longPressGestHandler = Animated.event([{
-        nativeEvent: ({ state, numberOfPointers }: any) => cond(
-            eq(state, State.ACTIVE),
-            [
-                set(heldLong, 1),
-            ],
-            cond(and(eq(state, State.FAILED), lessThan(numberOfPointers, 2)),
-                [
-                    call([], enableEditable)
-                ]
-            )
-        )
-
-    }])
-
     let updatePos = ([x, y]: readonly number[]) => {
-        changeData({ ...textData, pos: { x, y } }, index)
+        changeData(false, index, { ...textData, pos: { x, y } })
     }
 
     let onGesturePan = Animated.event([
@@ -100,32 +84,43 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
             nativeEvent: {
                 translationX: dragX,
                 translationY: dragY,
-                state: (state: State) => cond(
-                    and(eq(state, State.ACTIVE), heldLong),
-                    set(gestureState, State.ACTIVE as number),
-                    cond(eq(state, State.END),
+                state: (state: State) => block([
+                    cond(
+                        eq(state, State.BEGAN),
+                        set(gestureState, State.BEGAN as number)
+                    ),
+                    cond(
+                        eq(state, State.ACTIVE),
+                        [
+                            set(gestureState, State.ACTIVE as number),
+                        ],
+                    ),
+                    cond(
+                        eq(state, State.END),
                         [
                             cond(
                                 eq(gestureState, State.ACTIVE),
                                 [
                                     set(offsetX, min(max(0, add(offsetX, dragX)), sub(canvasWidth, textWidth))),
                                     set(offsetY, min(max(0, add(offsetY, dragY)), sub(canvasHeight, textHeight))),
+                                    call([offsetX, offsetY], updatePos)
                                 ]
                             ),
+                            cond(
+                                eq(gestureState, State.BEGAN),
+                                call([], enableEditable)
+                            ),
                             set(gestureState, 0),
-                            set(heldLong, 0),
-                            set(offsetX, min(max(0, offsetX), sub(canvasWidth, textWidth))),
-                            set(offsetY, min(max(0, offsetY), sub(canvasHeight, textHeight))),
-                            call([offsetX, offsetY], updatePos)
                         ]
                     )
-                ),
+
+                ]),
             },
         },
     ]);
 
     let setScale = ([scale]: readonly number[]) => {
-        changeData({ ...textData, fontSize: scale }, index)
+        changeData(false, index, { ...textData, fontSize: scale })
     }
 
     let onPinchGest = Animated.event([{
@@ -156,81 +151,70 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
         offsetY
     );
 
-    let transX = cond(
-        eq(heldLong, 1),
-        moveX,
-        offsetX
-    );
-    let transY = cond(
-        eq(heldLong, 1),
-        moveY,
-        offsetY
-    )
+
     let changeEdit = () => {
         setEditable(false);
-        changeData({ ...textData, text, new: false }, index);
+        if (text !== '') {
+            return changeData(false, index, { ...textData, text, new: false });
+        }
+        changeData(true, index);
     }
+
+    let onTouchStart = onSelected ? () => onSelected(index) : undefined;
+
+    console.log();
+
     return (
-        <LongPressGestureHandler
-            ref={pressGesRef}
-            onHandlerStateChange={longPressGestHandler}
-            minDurationMs={1000}
-            maxDist={10}
-            waitFor={pinchGesRef}
-            enabled={!editable && !isDrawing}
+
+        <Animated.View style={{
+            position: 'absolute',
+            transform: [{
+                translateX: moveX,
+                translateY: moveY,
+            }],
+            backgroundColor: 'red'
+
+        }}
+            onTouchStart={onTouchStart}
         >
-            <Animated.View style={{
-                position: 'absolute',
+            <AnimTextInput
+                onLayout={({ nativeEvent }: any) => {
+                    let width = nativeEvent.layout.width;
+                    let height = nativeEvent.layout.height;
+                    textHeight.setValue(height);
+                    textWidth.setValue(width);
+                }}
 
-                transform: [{
-                    translateX: transX,
-                    translateY: transY,
-                }]
-            }}>
-                <Animated.View style={{ backgroundColor: 'grey', opacity: heldLong, ...StyleSheet.absoluteFillObject }} />
-                {editable && <Animated.View style={{ backgroundColor: 'grey', ...StyleSheet.absoluteFillObject }} />}
-                <AnimTextInput
-                    onLayout={({ nativeEvent }: any) => {
-                        let width = nativeEvent.layout.width;
-                        let height = nativeEvent.layout.height;
-                        textHeight.setValue(height);
-                        textWidth.setValue(width);
-                    }}
+                value={text}
+                textAlign='center'
+                editable={editable}
+                maxLength={15}
+                autoFocus
+                onBlur={changeEdit}
+                onEndEditing={changeEdit}
+                ref={textRef}
+                onChangeText={(e: any) => setText(e)}
+                style={{ color: (editable ? 'black' : textData.color), fontSize: finalScale, maxWidth: canvasWidth - 10, maxHeight: canvasHeight - 10 }} />
 
-                    value={text}
-                    textAlign='center'
-                    editable={editable}
-                    maxLength={15}
-                    autoFocus
-                    onBlur={changeEdit}
-                    onEndEditing={changeEdit}
-                    ref={textRef}
-                    onChangeText={(e: any) => setText(e)}
-                    style={{ color: (editable ? 'black' : textData.color), fontSize: finalScale, maxWidth: canvasWidth - 10, maxHeight: canvasHeight - 10 }} />
+            <PinchGestureHandler
+                ref={pinchGesRef}
+                onGestureEvent={onPinchGest}
+                onHandlerStateChange={onPinchGest}
+                hitSlop={100}
+                enabled={!editable && !isDrawing}
+            >
+                <Animated.View style={{ ...StyleSheet.absoluteFillObject }} />
+            </PinchGestureHandler>
+            <PanGestureHandler
+                ref={panGesRef}
+                onHandlerStateChange={onGesturePan}
+                onGestureEvent={onGesturePan}
+                maxPointers={1}
+            >
+                <Animated.View style={{ ...StyleSheet.absoluteFillObject }} />
+            </PanGestureHandler >
+        </Animated.View>
 
-                <PinchGestureHandler
-                    ref={pinchGesRef}
-                    waitFor={pressGesRef}
-                    onGestureEvent={onPinchGest}
-                    onHandlerStateChange={onPinchGest}
-                    hitSlop={100}
-                    enabled={!editable && !isDrawing}
-                >
-                    <Animated.View style={{ ...StyleSheet.absoluteFillObject }} />
-                </PinchGestureHandler>
-                <PanGestureHandler
-                    ref={panGesRef}
-                    onHandlerStateChange={onGesturePan}
-                    simultaneousHandlers={[pressGesRef]}
-                    onGestureEvent={onGesturePan}
-                    waitFor={pressGesRef}
-                    maxPointers={1}
-                    enabled={!editable && !isDrawing}
-                >
-                    <Animated.View style={{ ...StyleSheet.absoluteFillObject }} />
-                </PanGestureHandler >
-            </Animated.View>
-        </LongPressGestureHandler >
     )
 
 }
