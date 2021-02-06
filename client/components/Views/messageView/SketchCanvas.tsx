@@ -1,15 +1,21 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureResponderEvent, PanResponder, useWindowDimensions, View } from "react-native";
+import Canvas from "react-native-canvas";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
-import Animated, { add, block, call, cond, debug, defined, eq, max, min, not, set, sub, useValue } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import Svg, { Path, Text } from 'react-native-svg'
 import CanvasTextInput from "./CanvasTextInput";
 
 export enum CanvasTools {
-    TEXT = 1,
-    DRAW = 2
+    TEXT,
+    DRAW,
 }
 
+export enum CanvasState {
+    EDITING,
+    DISABLED,
+    PRE_SUBMIT
+}
 
 interface Point {
     x: number,
@@ -24,6 +30,11 @@ interface Line {
 
 export interface SketchCanvas {
     render: JSX.Element,
+    currentTool: CanvasTools,
+    lineWidth: number,
+    clearCanvas(): void,
+    disableCanvas(): void,
+    enableCanvas(): void,
     setLineWidth(lineWidth: number): void,
     setColor(color: string): void,
     setCurrentTool(tool: CanvasTools): void,
@@ -42,6 +53,7 @@ const FONT_SIZE = 23;
 
 export function useSketchCanvas(width: number, height: number, bannerHeight: number): SketchCanvas {
     const [lines, setLines] = useState<Line[]>([]);
+    const [currentLine, setCurrentLine] = useState<Line | null>(null);
     const [drawing, setDrawing] = useState(false);
     const [color, setColor] = useState('#FFFFFF');
     const [lineWidth, setLineWidth] = useState(12);
@@ -49,7 +61,10 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
     let [currentTool, setCurrentTool] = useState(CanvasTools.TEXT);
     let [selectedText, setSelectedText] = useState<number>(-1)
     let [scale, setScale] = useState(1);
+    let [canvasState, setCanvasState] = useState(CanvasState.EDITING);
     const window = useWindowDimensions()
+    let canvasDisabled = canvasState === CanvasState.DISABLED;
+    let inPreSubmit = canvasState === CanvasState.PRE_SUBMIT;
 
 
     useEffect(() => {
@@ -58,11 +73,12 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
     }, [bannerHeight, window])
 
 
+
     const addText = (x: number, y: number) => {
 
         let newText = {
             text: '',
-            fontSize: FONT_SIZE,
+            fontSize: lineWidth,
             pos: { x, y },
             color,
             new: true
@@ -71,19 +87,18 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
     }
 
 
+
+
     const submit = () => {
-
-        // if (ctx && data) {
-        //     console.log(data);
-        //     ctx.fillStyle = 'white';
-        //     ctx.strokeStyle = 'white'
-        //     ctx.font = `${data.fontSize}px arial`;
-        //     ctx.fillText(data.text, data.pos.x, data.fontSize + data.pos.y)
-        // }
-
+        setCanvasState(CanvasState.PRE_SUBMIT);
     }
     let startDraw = (x: number, y: number) => {
-        setLines(prevState => [...prevState, { color, lineWidth, points: [{ x, y }] }])
+        let newLine = {
+            color,
+            lineWidth,
+            points: [{ x, y }]
+        }
+        setCurrentLine(newLine);
         setDrawing(true)
     }
 
@@ -92,17 +107,19 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
             return
         x = Math.min(Math.max(0, x), width)
         y = Math.min(Math.max(0, y), height)
-        setLines(prevState => {
-            let line = prevState.pop()!;
-            return [...prevState, { ...line, points: [...line?.points, { x, y }] }]
+        setCurrentLine(prevState => {
+            if (prevState)
+                return { ...prevState, points: [...prevState.points, { x, y }] }
+            return null
         })
     }
 
-    let resetTextSelected = () => {
-        // setSelectedText(-1)
-    }
     let endDraw = () => {
         setDrawing(false);
+        if (currentLine) {
+            setLines(prevState => [...prevState, currentLine])
+            setCurrentLine(null);
+        }
     }
 
 
@@ -130,7 +147,7 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
                 console.log('end');
 
                 if (currentTool === CanvasTools.DRAW) {
-                    setDrawing(false);
+                    endDraw();
                 } else if (selectedText != -1) {
                     setSelectedText(-1)
                 } else {
@@ -155,16 +172,34 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
             return [...prevState];
         })
     }
-
+    let paths = useMemo(() => lines.map((line, i) => <Path
+        key={i}
+        d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+        strokeWidth={line.lineWidth}
+        strokeLinecap="round"
+        stroke={line.color}
+    />), [lines])
 
     let selectElement = (index: number) => setSelectedText(index);
+    let clearCanvas = () => {
+        setTexts([]);
+        setLines([]);
+    };
 
-    let canvas = {
+    let disableCanvas = () => {
+        setCanvasState(CanvasState.DISABLED);
+    }
+    let enableCanvas = () => {
+        setCanvasState(CanvasState.EDITING)
+    }
+    let canvas: SketchCanvas = {
         render: (
             <Animated.View style={{ transform: [{ scale }] }}>
+
+
                 <PanGestureHandler maxPointers={1}
-                    onHandlerStateChange={handlePanGesture}
-                    onGestureEvent={handlePanGesture}
+                    onHandlerStateChange={canvasDisabled ? undefined : handlePanGesture}
+                    onGestureEvent={canvasDisabled ? undefined : handlePanGesture}
                 >
                     <Animated.View>
                         <Svg
@@ -174,21 +209,38 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
                                 width: width,
                             }}
                         >
-                            {
-                                lines.map((line, i) => <Path
-                                    key={i}
-                                    d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
-                                    strokeWidth={line.lineWidth}
+                            {paths}
+                            {currentLine &&
+                                <Path
+                                    d={'M' + currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+                                    strokeWidth={currentLine.lineWidth}
                                     strokeLinecap="round"
-                                    stroke={color}
-                                />)
+                                    stroke={currentLine.color}
+                                />}
+                            {
+                                inPreSubmit && texts.map((textData, i) =>
+                                    <Text
+                                        key={i}
+                                        fill={textData.color}
+                                        fontSize={textData.fontSize}
+                                        x={textData.pos.x}
+                                        y={textData.pos.y + textData.fontSize}
+                                    >{textData.text}
+                                    </Text>
+                                )
                             }
                         </Svg>
                     </Animated.View>
                 </PanGestureHandler>
-                {texts.map((textData, i) => <CanvasTextInput onSelected={selectElement} isDrawing={true} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />)}
-            </Animated.View>
+                {!inPreSubmit && texts.map((textData, i) => <CanvasTextInput onSelected={canvasDisabled ? undefined : selectElement} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />)}
+
+            </Animated.View >
         ),
+        currentTool,
+        lineWidth,
+        disableCanvas,
+        enableCanvas,
+        clearCanvas,
         setLineWidth,
         setColor,
         setCurrentTool,
