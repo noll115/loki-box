@@ -32,7 +32,7 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
     let canvas = useSketchCanvas(320, 240, bannerHeight);
 
 
-    let CanvasBtn = useMemo(() => <Canvasbtns sketchCanvas={canvas} />, [canvas.currentTool])
+    let CanvasBtn = useMemo(() => <Canvasbtns sketchCanvas={canvas} />, [canvas.currentTool, canvas.canvasState])
 
     return (
         <View style={styles.container}>

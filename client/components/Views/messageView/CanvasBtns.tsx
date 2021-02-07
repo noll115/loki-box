@@ -27,8 +27,9 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from 'react'
 import { StyleSheet, View, Keyboard, KeyboardEventListener, Text } from 'react-native';
-import { CanvasTools, SketchCanvas } from './SketchCanvas';
+import { CanvasState, CanvasTools, SketchCanvas } from './SketchCanvas';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { SubmitScreen } from './SubmitScreen';
 
 
 const BTN_SIZE = 70;
@@ -184,12 +185,11 @@ interface canvasBtnProps {
 }
 
 
-export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchCanvas }) => {
+function DrawingBtns(sketchCanvas: SketchCanvas) {
     let { currentTool } = sketchCanvas;
     let txtAddition = currentTool === CanvasTools.TEXT ? 'Text' : 'Stroke';
-
     return (
-        <View style={canvasBtnStyle.container}>
+        <View style={{ width: '100%', height: '100%' }}>
             <View style={{ flex: 4, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={canvasBtnStyle.sliderText}>{txtAddition} Color:</Text>
                 <ColorSlider setColor={sketchCanvas.setColor} />
@@ -198,7 +198,7 @@ export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchCanvas }) => {
             </View>
             <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
                 <TouchableOpacity style={canvasBtnStyle.modeBtn}
-                    onPress={() => sketchCanvas.submit()}
+                    onPress={() => sketchCanvas.preSubmit()}
                 >
                     <MaterialCommunityIcons name="send" size={BTN_SIZE / 3} color="black" />
                 </TouchableOpacity>
@@ -228,10 +228,26 @@ export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchCanvas }) => {
 }
 
 
+
+export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchCanvas }) => {
+
+    let isEditing = sketchCanvas.canvasState === CanvasState.EDITING;
+    console.log(isEditing);
+
+    return (
+        <View style={canvasBtnStyle.container}>
+            {isEditing && DrawingBtns(sketchCanvas)}
+            {!isEditing && <SubmitScreen />}
+        </View>
+    )
+}
+
+
 const canvasBtnStyle = StyleSheet.create({
     container: {
         flex: 1,
         width: '100%',
+        alignItems: 'center',
     },
     modeBtn: {
         width: BTN_SIZE,

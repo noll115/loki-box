@@ -36,7 +36,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
 
 
     let textRef = useRef<any | null>(null);
-    let [editable, setEditable] = useState(textData.new);
+    let [editable, setEditable] = useState(true);
 
     let textWidth = useValue(0);
     let textHeight = useValue(0);
@@ -122,7 +122,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     let changeEdit = () => {
         setEditable(false);
 
-        return changeData(false, index, { ...textDataRef.current, new: false });
+        return changeData(false, index, { ...textDataRef.current });
     }
 
     let onTouchStart = onSelected ? () => onSelected(index) : undefined;

@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GestureResponderEvent, PanResponder, useWindowDimensions, View } from "react-native";
-import Canvas from "react-native-canvas";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useWindowDimensions, View } from "react-native";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
 import Animated from "react-native-reanimated";
 import { Path, Text, Svg } from 'react-native-svg'
@@ -12,7 +11,6 @@ export enum CanvasTools {
 
 export enum CanvasState {
     EDITING,
-    DISABLED,
     PRE_SUBMIT
 }
 
@@ -27,28 +25,27 @@ interface Line {
     lineWidth: number
 }
 
-export interface SketchCanvas {
-    render: JSX.Element,
-    currentTool: CanvasTools,
-    lineWidth: number,
-    clearCanvas(): void,
-    disableCanvas(): void,
-    enableCanvas(): void,
-    setLineWidth(lineWidth: number): void,
-    setColor(color: string): void,
-    setCurrentTool(tool: CanvasTools): void,
-    submit(): void
-}
-
 export interface TextData {
     text: string,
     fontSize: number,
     pos: Point,
     color: string,
-    new: boolean
 }
 
-const FONT_SIZE = 23;
+export interface SketchCanvas {
+    render: JSX.Element,
+    currentTool: CanvasTools,
+    lineWidth: number,
+    canvasState: CanvasState,
+    clearCanvas(): void,
+    enableCanvas(): void,
+    setLineWidth(lineWidth: number): void,
+    setColor(color: string): void,
+    setCurrentTool(tool: CanvasTools): void,
+    preSubmit(): void
+}
+
+
 
 export function useSketchCanvas(width: number, height: number, bannerHeight: number): SketchCanvas {
     const [lines, setLines] = useState<Line[]>([]);
@@ -62,9 +59,7 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
     let [scale, setScale] = useState(1);
     let [canvasState, setCanvasState] = useState(CanvasState.EDITING);
     let svgRef = useRef<any>(null);
-    let canvasRef = useRef<Canvas>(null);
     const window = useWindowDimensions()
-    let canvasDisabled = canvasState === CanvasState.DISABLED;
     let inPreSubmit = canvasState === CanvasState.PRE_SUBMIT;
 
 
@@ -75,44 +70,9 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
 
 
     useEffect(() => {
-        // let data = JSON.stringify({
-        //     texts,
-        //     lines
-        // });
-
-        // console.log(data);
-        // console.log(data.length);
-        if (canvasState === CanvasState.PRE_SUBMIT && canvasRef.current) {
-            let canvas = canvasRef.current;
-            let ctx = canvas.getContext('2d');
-            console.log(canvas);
-            canvas.width = width;
-            canvas.height = height;
-            if (ctx) {
-                ctx.fillStyle = 'black';
-                ctx.fillRect(0, 0, width, height);
-                texts.forEach(textData => {
-                    ctx.fillStyle = textData.color;
-                    ctx.font = `${textData.fontSize}px Arial`;
-                    ctx.fillText(textData.text, textData.pos.x, textData.pos.y + textData.fontSize);
-                });
-                lines.forEach(line => {
-                    ctx.strokeStyle = line.color;
-                    ctx.lineWidth = line.lineWidth;
-                    ctx.lineCap = 'round';
-                    ctx.beginPath();
-                    let firstPoint = line.points[0];
-                    ctx.moveTo(firstPoint.x, firstPoint.y);
-                    for (let i = 1; i < line.points.length; i++) {
-                        const point = line.points[i];
-                        ctx.lineTo(point.x, point.y);
-                    }
-                    ctx.stroke();
-                });
-                canvas.toDataURL().then(data => {
-
-                })
-            }
+        if (canvasState === CanvasState.PRE_SUBMIT) {
+            let string = JSON.stringify({ texts, lines })
+            console.log('json', string.length)
         }
     }, [canvasState])
 
@@ -123,8 +83,7 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
             text: '',
             fontSize: lineWidth,
             pos: { x, y },
-            color,
-            new: true
+            color
         };
         setTexts(prevState => [...prevState, newText])
     }
@@ -132,7 +91,7 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
 
 
 
-    const submit = () => {
+    const preSubmit = () => {
         setCanvasState(CanvasState.PRE_SUBMIT);
     }
     let startDraw = (x: number, y: number) => {
@@ -172,8 +131,6 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
         y = Math.round(y);
         switch (nativeEvent.state) {
             case State.BEGAN:
-                console.log('f');
-
                 if (currentTool === CanvasTools.DRAW) {
                     startDraw(x, y)
                 } else {
@@ -181,15 +138,12 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
                 }
                 break;
             case State.ACTIVE:
-                console.log('active');
                 if (currentTool === CanvasTools.DRAW) {
                     activeDraw(x, y);
                 } else if (selectedText != -1) {
                 }
                 break;
             case State.END:
-                console.log('end');
-
                 if (currentTool === CanvasTools.DRAW) {
                     endDraw();
                 } else if (selectedText != -1) {
@@ -215,13 +169,16 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
             return [...prevState];
         })
     }
-    let paths = useMemo(() => lines.map((line, i) => <Path
-        key={i}
-        d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
-        strokeWidth={line.lineWidth}
-        strokeLinecap="round"
-        stroke={line.color}
-    />), [lines])
+    let paths = useMemo(() => {
+        console.log('ran')
+        return lines.map((line, i) => <Path
+            key={i}
+            d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+            strokeWidth={line.lineWidth}
+            strokeLinecap="round"
+            stroke={line.color}
+        />)
+    }, [lines])
 
     let selectElement = (index: number) => setSelectedText(index);
     let clearCanvas = () => {
@@ -229,57 +186,58 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
         setLines([]);
     };
 
-    let disableCanvas = () => {
-        setCanvasState(CanvasState.DISABLED);
-    }
     let enableCanvas = () => {
         setCanvasState(CanvasState.EDITING)
     }
     let canvas: SketchCanvas = {
         render: (
-            <>
-                <Animated.View style={{ transform: [{ scale }] }}>
+            <Animated.View style={{ transform: [{ scale }] }}>
 
 
-                    <PanGestureHandler maxPointers={1}
-                        onHandlerStateChange={canvasDisabled ? undefined : handlePanGesture}
-                        onGestureEvent={canvasDisabled ? undefined : handlePanGesture}
-                    >
-                        <Animated.View>
-                            <Svg
-                                style={{
-                                    backgroundColor: 'black',
-                                    height: height,
-                                    width: width,
-                                }}
-                                ref={svgRef}
-                            >
-                                {paths}
-                                {currentLine &&
-                                    <Path
-                                        d={'M' + currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
-                                        strokeWidth={currentLine.lineWidth}
-                                        strokeLinecap="round"
-                                        stroke={currentLine.color}
-                                    />}
-                                {inPreSubmit && texts.map((textData, i) => <Text x={textData.pos.x} y={textData.fontSize + textData.pos.y} fontSize={textData.fontSize} key={i} fill={textData.color} >{textData.Text}</Text>)}
-                            </Svg>
-                        </Animated.View>
-                    </PanGestureHandler>
-                    {!inPreSubmit && texts.map((textData, i) => <CanvasTextInput onSelected={canvasDisabled ? undefined : selectElement} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />)}
-                    {inPreSubmit && <Canvas style={{ width: width, height: height, position: 'absolute', bottom: 0, backgroundColor: 'red' }} ref={canvasRef} />}
-                </Animated.View >
-            </>
+                <PanGestureHandler maxPointers={1}
+                    onHandlerStateChange={inPreSubmit ? undefined : handlePanGesture}
+                    onGestureEvent={inPreSubmit ? undefined : handlePanGesture}
+                >
+                    <Animated.View>
+                        <Svg
+                            style={{
+                                backgroundColor: 'black',
+                                height: height,
+                                width: width,
+                            }}
+                            ref={svgRef}
+                        >
+                            {paths}
+                            {currentLine &&
+                                <Path
+                                    d={'M' + currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+                                    strokeWidth={currentLine.lineWidth}
+                                    strokeLinecap="round"
+                                    stroke={currentLine.color}
+                                />}
+                            {inPreSubmit && texts.map((textData, i) =>
+                                <Text
+                                    x={textData.pos.x}
+                                    y={textData.fontSize + textData.pos.y}
+                                    fontSize={textData.fontSize}
+                                    key={i} fill={textData.color} >{textData.text}
+                                </Text>)
+                            }
+                        </Svg>
+                    </Animated.View>
+                </PanGestureHandler>
+                {!inPreSubmit && texts.map((textData, i) => <CanvasTextInput onSelected={selectElement} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />)}
+            </Animated.View >
         ),
+        canvasState,
         currentTool,
         lineWidth,
-        disableCanvas,
         enableCanvas,
         clearCanvas,
         setLineWidth,
         setColor,
         setCurrentTool,
-        submit
+        preSubmit
     }
     return canvas;
 }
