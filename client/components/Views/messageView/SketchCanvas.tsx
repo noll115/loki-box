@@ -3,9 +3,8 @@ import { GestureResponderEvent, PanResponder, useWindowDimensions, View } from "
 import Canvas from "react-native-canvas";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
 import Animated from "react-native-reanimated";
-import Svg, { Path, Text } from 'react-native-svg'
+import { Path, Text, Svg } from 'react-native-svg'
 import CanvasTextInput from "./CanvasTextInput";
-
 export enum CanvasTools {
     TEXT,
     DRAW,
@@ -62,6 +61,8 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
     let [selectedText, setSelectedText] = useState<number>(-1)
     let [scale, setScale] = useState(1);
     let [canvasState, setCanvasState] = useState(CanvasState.EDITING);
+    let svgRef = useRef<any>(null);
+    let canvasRef = useRef<Canvas>(null);
     const window = useWindowDimensions()
     let canvasDisabled = canvasState === CanvasState.DISABLED;
     let inPreSubmit = canvasState === CanvasState.PRE_SUBMIT;
@@ -72,6 +73,48 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
         setScale(scale)
     }, [bannerHeight, window])
 
+
+    useEffect(() => {
+        // let data = JSON.stringify({
+        //     texts,
+        //     lines
+        // });
+
+        // console.log(data);
+        // console.log(data.length);
+        if (canvasState === CanvasState.PRE_SUBMIT && canvasRef.current) {
+            let canvas = canvasRef.current;
+            let ctx = canvas.getContext('2d');
+            console.log(canvas);
+            canvas.width = width;
+            canvas.height = height;
+            if (ctx) {
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, width, height);
+                texts.forEach(textData => {
+                    ctx.fillStyle = textData.color;
+                    ctx.font = `${textData.fontSize}px Arial`;
+                    ctx.fillText(textData.text, textData.pos.x, textData.pos.y + textData.fontSize);
+                });
+                lines.forEach(line => {
+                    ctx.strokeStyle = line.color;
+                    ctx.lineWidth = line.lineWidth;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    let firstPoint = line.points[0];
+                    ctx.moveTo(firstPoint.x, firstPoint.y);
+                    for (let i = 1; i < line.points.length; i++) {
+                        const point = line.points[i];
+                        ctx.lineTo(point.x, point.y);
+                    }
+                    ctx.stroke();
+                });
+                canvas.toDataURL().then(data => {
+
+                })
+            }
+        }
+    }, [canvasState])
 
 
     const addText = (x: number, y: number) => {
@@ -101,7 +144,6 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
         setCurrentLine(newLine);
         setDrawing(true)
     }
-
     let activeDraw = (x: number, y: number) => {
         if (!drawing)
             return
@@ -126,6 +168,8 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
 
     let handlePanGesture = ({ nativeEvent }: PanGestureHandlerGestureEvent) => {
         let { x, y } = nativeEvent;
+        x = Math.round(x);
+        y = Math.round(y);
         switch (nativeEvent.state) {
             case State.BEGAN:
                 console.log('f');
@@ -157,7 +201,6 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
                 break;
         }
     }
-
 
 
     let changeData = (removeText: boolean, index: number, newData?: TextData) => {
@@ -194,47 +237,39 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
     }
     let canvas: SketchCanvas = {
         render: (
-            <Animated.View style={{ transform: [{ scale }] }}>
+            <>
+                <Animated.View style={{ transform: [{ scale }] }}>
 
 
-                <PanGestureHandler maxPointers={1}
-                    onHandlerStateChange={canvasDisabled ? undefined : handlePanGesture}
-                    onGestureEvent={canvasDisabled ? undefined : handlePanGesture}
-                >
-                    <Animated.View>
-                        <Svg
-                            style={{
-                                backgroundColor: 'black',
-                                height: height,
-                                width: width,
-                            }}
-                        >
-                            {paths}
-                            {currentLine &&
-                                <Path
-                                    d={'M' + currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
-                                    strokeWidth={currentLine.lineWidth}
-                                    strokeLinecap="round"
-                                    stroke={currentLine.color}
-                                />}
-                            {
-                                inPreSubmit && texts.map((textData, i) =>
-                                    <Text
-                                        key={i}
-                                        fill={textData.color}
-                                        fontSize={textData.fontSize}
-                                        x={textData.pos.x}
-                                        y={textData.pos.y + textData.fontSize}
-                                    >{textData.text}
-                                    </Text>
-                                )
-                            }
-                        </Svg>
-                    </Animated.View>
-                </PanGestureHandler>
-                {!inPreSubmit && texts.map((textData, i) => <CanvasTextInput onSelected={canvasDisabled ? undefined : selectElement} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />)}
-
-            </Animated.View >
+                    <PanGestureHandler maxPointers={1}
+                        onHandlerStateChange={canvasDisabled ? undefined : handlePanGesture}
+                        onGestureEvent={canvasDisabled ? undefined : handlePanGesture}
+                    >
+                        <Animated.View>
+                            <Svg
+                                style={{
+                                    backgroundColor: 'black',
+                                    height: height,
+                                    width: width,
+                                }}
+                                ref={svgRef}
+                            >
+                                {paths}
+                                {currentLine &&
+                                    <Path
+                                        d={'M' + currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+                                        strokeWidth={currentLine.lineWidth}
+                                        strokeLinecap="round"
+                                        stroke={currentLine.color}
+                                    />}
+                                {inPreSubmit && texts.map((textData, i) => <Text x={textData.pos.x} y={textData.fontSize + textData.pos.y} fontSize={textData.fontSize} key={i} fill={textData.color} >{textData.Text}</Text>)}
+                            </Svg>
+                        </Animated.View>
+                    </PanGestureHandler>
+                    {!inPreSubmit && texts.map((textData, i) => <CanvasTextInput onSelected={canvasDisabled ? undefined : selectElement} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />)}
+                    {inPreSubmit && <Canvas style={{ width: width, height: height, position: 'absolute', bottom: 0, backgroundColor: 'red' }} ref={canvasRef} />}
+                </Animated.View >
+            </>
         ),
         currentTool,
         lineWidth,

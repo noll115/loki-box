@@ -35,11 +35,8 @@ interface MsgProps {
 const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, changeData, onSelected }) => {
 
 
-    let [text, setText] = useState(textData.text);
     let textRef = useRef<any | null>(null);
     let [editable, setEditable] = useState(textData.new);
-    let panGesRef = useRef<PanGestureHandler | null>(null);
-
 
     let textWidth = useValue(0);
     let textHeight = useValue(0);
@@ -48,6 +45,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     let offsetX = useValue(textData.pos.x);
     let offsetY = useValue(textData.pos.y);
     let gestureState = useValue(-1);
+    let textDataRef = useRef<TextData>(textData);
 
 
     useEffect(() => {
@@ -55,16 +53,16 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
             textRef.current.focus()
         }
     }, [editable, textRef])
-
+    useEffect(() => {
+        textDataRef.current = textData;
+    }, [textData])
 
     let enableEditable = () => {
         setEditable(true);
     }
 
     let updatePos = ([x, y]: readonly number[]) => {
-        console.log(textData);
-        //text data is empty
-        changeData(false, index, { ...textData, pos: { x, y } })
+        changeData(false, index, { ...textDataRef.current, pos: { x, y } })
     }
 
     let onGesturePan = Animated.event([
@@ -123,16 +121,15 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
 
     let changeEdit = () => {
         setEditable(false);
-        console.log(text);
 
-        if (text !== '') {
-            return changeData(false, index, { ...textData, text, new: false });
-        }
-        changeData(true, index);
+        return changeData(false, index, { ...textDataRef.current, new: false });
     }
 
     let onTouchStart = onSelected ? () => onSelected(index) : undefined;
 
+    let changeText = (text: string) => {
+        changeData(false, index, { ...textDataRef.current, text })
+    }
 
     return (
 
@@ -153,17 +150,16 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                     textWidth.setValue(width);
                 }}
 
-                value={text}
+                value={textData.text}
                 textAlign='center'
                 editable={editable}
                 maxLength={15}
                 onBlur={changeEdit}
                 onEndEditing={changeEdit}
                 ref={textRef}
-                onChangeText={(e: any) => setText(e)}
+                onChangeText={changeText}
                 style={{ color: textData.color, textAlignVertical: 'top', textAlign: 'left', fontSize: textData.fontSize, maxWidth: canvasWidth - 10, maxHeight: canvasHeight - 10 }} />
             <PanGestureHandler
-                ref={panGesRef}
                 onHandlerStateChange={onGesturePan}
                 onGestureEvent={onGesturePan}
                 maxPointers={1}

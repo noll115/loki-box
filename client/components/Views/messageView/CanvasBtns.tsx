@@ -200,7 +200,7 @@ export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchCanvas }) => {
                 <TouchableOpacity style={canvasBtnStyle.modeBtn}
                     onPress={() => sketchCanvas.submit()}
                 >
-                    <Ionicons name="ios-enter-outline" size={BTN_SIZE / 3} color="black" />
+                    <MaterialCommunityIcons name="send" size={BTN_SIZE / 3} color="black" />
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={() => sketchCanvas.clearCanvas()}
