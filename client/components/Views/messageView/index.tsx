@@ -1,19 +1,13 @@
 import { Dimensions, GestureResponderEvent, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { RootState } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../homeView/homeViewNav';
-import * as Orientation from "expo-screen-orientation";
-import { useSketchCanvas } from './SketchCanvas';
-import { Canvasbtns } from "./CanvasBtns"
+import { SketchCanvas } from './SketchCanvas';
+import { SubmittedScreen } from './SubmittedScreen'
 
 
 let selectorSize = 50
-
-
-
-
-
 
 
 const mapState = (state: RootState) => ({
@@ -27,24 +21,34 @@ const connector = connect(mapState, mapDispatch);
 
 type Props = ConnectedProps<typeof connector> & StackNavProp<'SendMessage'>
 const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
+    let [sketchSubmitted, setSketchSubmitted] = useState(false);
     let { box } = route.params
     let [bannerHeight, setBannerHeight] = useState(0);
-    let canvas = useSketchCanvas(320, 240, bannerHeight);
 
+    const submit = () => {
+        setSketchSubmitted(true)
+    }
 
-    let CanvasBtn = useMemo(() => <Canvasbtns sketchCanvas={canvas} />, [canvas.currentTool, canvas.canvasState])
+    const onDone = () => {
+        navigation.pop()
+    }
+
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}
-                onLayout={({ nativeEvent }) => setBannerHeight(nativeEvent.layout.height)}
-            >
-                <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
-            </View>
-            <View style={styles.body}>
-                {canvas.render}
-                {CanvasBtn}
-            </View>
+            { !sketchSubmitted &&
+                <>
+                    <View style={styles.header}
+                        onLayout={({ nativeEvent }) => setBannerHeight(nativeEvent.layout.height)}
+                    >
+                        <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
+                    </View>
+                    <View style={styles.body}>
+                        <SketchCanvas height={240} width={320} bannerHeight={bannerHeight} onSubmit={submit} />
+                    </View>
+                </>
+            }
+            {   sketchSubmitted && <SubmittedScreen onPress={onDone} />}
         </View >
     )
 }

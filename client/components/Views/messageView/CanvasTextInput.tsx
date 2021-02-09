@@ -11,13 +11,13 @@ import Animated, {
     min,
     block,
 } from 'react-native-reanimated'
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
     PanGestureHandler,
     State,
 } from 'react-native-gesture-handler';
+import { ReducerActions, CanvasActions, TextData } from "./../../../types/sketchCanvas";
 
-import { TextData } from "./SketchCanvas";
 
 
 
@@ -28,11 +28,11 @@ interface MsgProps {
     canvasWidth: number,
     canvasHeight: number,
     index: number,
-    changeData: (removeText: boolean, index: number, newData?: TextData) => void,
-    onSelected: ((index: number) => void) | undefined
+    sketchDispatch: React.Dispatch<ReducerActions>,
+
 }
 
-const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, changeData, onSelected }) => {
+const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, sketchDispatch }) => {
 
 
     let textRef = useRef<any | null>(null);
@@ -62,7 +62,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     }
 
     let updatePos = ([x, y]: readonly number[]) => {
-        changeData(false, index, { ...textDataRef.current, pos: { x, y } })
+        sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current, pos: { x, y } } })
     }
 
     let onGesturePan = Animated.event([
@@ -121,14 +121,16 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
 
     let changeEdit = () => {
         setEditable(false);
+        if (textDataRef.current.text === '') {
+            return sketchDispatch({ type: CanvasActions.REMOVE_TEXT, index });
+        }
 
-        return changeData(false, index, { ...textDataRef.current });
+        sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current } })
     }
 
-    let onTouchStart = onSelected ? () => onSelected(index) : undefined;
 
     let changeText = (text: string) => {
-        changeData(false, index, { ...textDataRef.current, text })
+        sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current, text } })
     }
 
     return (
@@ -140,7 +142,6 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                 translateY: moveY,
             }],
         }}
-            onTouchStart={onTouchStart}
         >
             <TextInput
                 onLayout={({ nativeEvent }: any) => {
@@ -158,7 +159,12 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                 onEndEditing={changeEdit}
                 ref={textRef}
                 onChangeText={changeText}
-                style={{ color: textData.color, textAlignVertical: 'top', textAlign: 'left', fontSize: textData.fontSize, maxWidth: canvasWidth - 10, maxHeight: canvasHeight - 10 }} />
+                style={[style.text, {
+                    color: textData.color,
+                    fontSize: textData.fontSize,
+                    maxWidth: canvasWidth - 10,
+                    maxHeight: canvasHeight - 10
+                }]} />
             <PanGestureHandler
                 onHandlerStateChange={onGesturePan}
                 onGestureEvent={onGesturePan}
@@ -171,6 +177,13 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     )
 
 }
+
+let style = StyleSheet.create({
+    text: {
+        textAlignVertical: 'top',
+        textAlign: 'left',
+    }
+})
 
 const CanvasTextInput = _CanvasTextInput;
 export default CanvasTextInput; 

@@ -1,125 +1,245 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useWindowDimensions, View } from "react-native";
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useReducer, useRef, useState } from "react";
+import { StyleSheet, useWindowDimensions, View, Text } from "react-native";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
-import Animated from "react-native-reanimated";
-import { Path, Text, Svg } from 'react-native-svg'
+import Animated, { and, block, call, Clock, cond, debug, Easing, eq, greaterOrEq, neq, not, onChange, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import { Path, Svg, Text as SVGText } from 'react-native-svg'
+import { Canvasbtns } from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
-export enum CanvasTools {
-    TEXT,
-    DRAW,
-}
+import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState } from "./../../../types/sketchCanvas";
+import { AntDesign } from "@expo/vector-icons";
 
-export enum CanvasState {
-    EDITING,
-    PRE_SUBMIT
-}
 
-interface Point {
-    x: number,
-    y: number
-}
-
-interface Line {
-    color: string
-    points: Point[]
-    lineWidth: number
-}
-
-export interface TextData {
-    text: string,
-    fontSize: number,
-    pos: Point,
-    color: string,
-}
-
-export interface SketchCanvas {
-    render: JSX.Element,
-    currentTool: CanvasTools,
-    lineWidth: number,
-    canvasState: CanvasState,
-    clearCanvas(): void,
-    enableCanvas(): void,
-    setLineWidth(lineWidth: number): void,
-    setColor(color: string): void,
-    setCurrentTool(tool: CanvasTools): void,
-    preSubmit(): void
+let INIT_STATE: SketchState = {
+    color: '#FFFFFF',
+    lineWidth: 12,
+    currentTool: CanvasTools.DRAW,
+    canvasState: CanvasState.EDITING,
+    scale: 1,
+    currentLine: null,
+    lines: [],
+    texts: [],
+    empty: true
 }
 
 
 
-export function useSketchCanvas(width: number, height: number, bannerHeight: number): SketchCanvas {
-    const [lines, setLines] = useState<Line[]>([]);
-    const [currentLine, setCurrentLine] = useState<Line | null>(null);
-    const [drawing, setDrawing] = useState(false);
-    const [color, setColor] = useState('#FFFFFF');
-    const [lineWidth, setLineWidth] = useState(12);
-    let [texts, setTexts] = useState<TextData[]>([]);
-    let [currentTool, setCurrentTool] = useState(CanvasTools.TEXT);
-    let [selectedText, setSelectedText] = useState<number>(-1)
-    let [scale, setScale] = useState(1);
-    let [canvasState, setCanvasState] = useState(CanvasState.EDITING);
-    let svgRef = useRef<any>(null);
+
+
+let canvasReducer = (prevState: SketchState, action: ReducerActions): SketchState => {
+    switch (action.type) {
+        case CanvasActions.SET_COLOR:
+            return { ...prevState, color: action.color }
+        case CanvasActions.SET_LINEWIDTH:
+            return { ...prevState, lineWidth: action.lineWidth };
+        case CanvasActions.SET_STATE:
+            return { ...prevState, canvasState: action.state };
+        case CanvasActions.SET_TOOL:
+            return { ...prevState, currentTool: action.tool };
+        case CanvasActions.SET_SCALE:
+            return { ...prevState, scale: action.scale };
+        case CanvasActions.CLEAR_CANVAS:
+            return { ...prevState, lines: [], texts: [], empty: true };
+        case CanvasActions.SET_CURRENTLINE:
+            return { ...prevState, currentLine: action.line };
+        case CanvasActions.CURRENT_LINE_FINISHED:
+            let { lines: prevLines, currentLine, texts } = prevState;
+            if (currentLine)
+                if (currentLine.points.length > 2) {
+                    let textLength = texts.length;
+                    let newLines = [...prevLines, currentLine];
+                    return { ...prevState, currentLine: null, lines: newLines, empty: (textLength === 0 && newLines.length === 0) }
+                }
+                else {
+                    return { ...prevState, currentLine: null }
+                }
+            return prevState;
+        case CanvasActions.ADD_TEXT:
+            let { texts: prevTexts } = prevState;
+            return { ...prevState, texts: [...prevTexts, action.text], empty: false };
+        case CanvasActions.CHANGE_TEXT:
+            let textChanging = [...prevState.texts];
+            textChanging[action.index] = action.newTextData;
+            return { ...prevState, texts: textChanging }
+        case CanvasActions.REMOVE_TEXT:
+            prevState.texts.splice(action.index, 1);
+            let textLength = prevState.texts.length;
+            let lineLength = prevState.lines.length;
+            return { ...prevState, texts: [...prevState.texts], empty: (textLength === 0 && lineLength === 0) }
+        default:
+            return prevState;
+    }
+}
+
+function animateOpacity(clock: Clock, shouldAnim: Animated.Value<number>) {
+    const state = {
+        finished: new Animated.Value(0),
+        position: new Animated.Value(0),
+        time: new Animated.Value(0),
+        frameTime: new Animated.Value(0),
+    };
+
+    const config = {
+        duration: new Animated.Value(250),
+        toValue: new Animated.Value(1),
+        easing: Easing.inOut(Easing.ease),
+    };
+
+    return block([
+        cond(
+            eq(shouldAnim, 1),
+            startClock(clock),
+        ),
+        timing(clock, state, config),
+        cond(state.finished,
+            stopClock(clock)
+        ),
+        state.position
+    ])
+}
+
+function heartAnim(clock: Clock, shouldAnim: Animated.Value<number>) {
+
+    let pulseVal = useValue<0 | 1>(0);
+
+    const state = {
+        finished: new Animated.Value(0),
+        position: new Animated.Value(0),
+        time: new Animated.Value(0),
+        frameTime: new Animated.Value(0),
+    };
+
+    const config = {
+        duration: new Animated.Value(1000),
+        toValue: new Animated.Value(1),
+        easing: Easing.inOut(Easing.ease),
+    };
+    let shouldPulse = eq(shouldAnim, 1);
+    let fillScreen = eq(shouldAnim, 2)
+    let pulse = block([
+        set(pulseVal, not(pulseVal)),
+        cond(
+            eq(pulseVal, 1),
+            [
+                set(state.finished, 0),
+                set(state.frameTime, 0),
+                set(state.time, 0),
+                set(config.toValue, 0),
+            ]
+        ),
+        cond(
+            eq(pulseVal, 0),
+            [
+                set(state.finished, 0),
+                set(state.frameTime, 0),
+                set(state.time, 0),
+                set(config.toValue, 1),
+            ]
+        ),
+    ])
+
+    return block([
+        cond(
+            shouldPulse,
+            startClock(clock)
+        ),
+
+        // we run the step here that is going to update position
+        timing(clock, state, config),
+        // if the animation is over we stop the clock
+        cond(state.finished, [
+            cond(
+                shouldPulse,
+                pulse,
+            ),
+            cond(
+                and(fillScreen, neq(config.toValue, 2)),
+                [
+                    set(state.finished, 0),
+                    set(state.time, 0),
+                    set(state.frameTime, 0),
+                    set(config.toValue, 2),
+                    startClock(clock)
+                ],
+                cond(and(fillScreen, eq(state.position, 2)),
+                    stopClock(clock)
+                )
+            ),
+        ]),
+        // we made the block return the updated position
+        state.position
+    ]);
+
+}
+
+
+interface Props {
+    width: number,
+    height: number,
+    bannerHeight: number,
+    onSubmit(): void
+}
+
+
+export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onSubmit }) => {
+    let [state, dispatch] = useReducer(canvasReducer, INIT_STATE);
+    console.log(CanvasState[state.canvasState]);
     const window = useWindowDimensions()
-    let inPreSubmit = canvasState === CanvasState.PRE_SUBMIT;
+    let submitting = state.canvasState === CanvasState.SUBMITTING;
 
+    let animateHeart = useValue<number>(0);
+    let clock1 = new Clock();
+    let clock2 = new Clock();
 
     useEffect(() => {
         let scale = (window.width - 20) / width;
-        setScale(scale)
+        dispatch({ type: CanvasActions.SET_SCALE, scale })
     }, [bannerHeight, window])
 
-
     useEffect(() => {
-        if (canvasState === CanvasState.PRE_SUBMIT) {
-            let string = JSON.stringify({ texts, lines })
-            console.log('json', string.length)
+        if (state.canvasState === CanvasState.SUBMITTING) {
+            animateHeart.setValue(1)
+            setTimeout(() => {
+                animateHeart.setValue(2)
+            }, 3000);
         }
-    }, [canvasState])
+    }, [state.canvasState])
+
+    let scaleAnim = heartAnim(clock1, animateHeart)
+    let opacityAnim = animateOpacity(clock2, animateHeart);
 
 
     const addText = (x: number, y: number) => {
 
         let newText = {
             text: '',
-            fontSize: lineWidth,
+            fontSize: state.lineWidth,
             pos: { x, y },
-            color
+            color: state.color
         };
-        setTexts(prevState => [...prevState, newText])
+        dispatch({ type: CanvasActions.ADD_TEXT, text: newText })
     }
 
 
-
-
-    const preSubmit = () => {
-        setCanvasState(CanvasState.PRE_SUBMIT);
-    }
     let startDraw = (x: number, y: number) => {
         let newLine = {
-            color,
-            lineWidth,
+            color: state.color,
+            lineWidth: state.lineWidth,
             points: [{ x, y }]
         }
-        setCurrentLine(newLine);
-        setDrawing(true)
+        dispatch({ type: CanvasActions.SET_CURRENTLINE, line: newLine })
     }
     let activeDraw = (x: number, y: number) => {
-        if (!drawing)
-            return
-        x = Math.min(Math.max(0, x), width)
-        y = Math.min(Math.max(0, y), height)
-        setCurrentLine(prevState => {
-            if (prevState)
-                return { ...prevState, points: [...prevState.points, { x, y }] }
-            return null
-        })
+        x = Math.min(Math.max(0, x), width);
+        y = Math.min(Math.max(0, y), height);
+        let line = state.currentLine;
+        if (line) {
+            dispatch({ type: CanvasActions.SET_CURRENTLINE, line: { ...line, points: [...line.points, { x, y }] } })
+        }
     }
 
     let endDraw = () => {
-        setDrawing(false);
-        if (currentLine) {
-            setLines(prevState => [...prevState, currentLine])
-            setCurrentLine(null);
+        if (state.currentLine) {
+            dispatch({ type: CanvasActions.CURRENT_LINE_FINISHED })
         }
     }
 
@@ -131,25 +251,21 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
         y = Math.round(y);
         switch (nativeEvent.state) {
             case State.BEGAN:
-                if (currentTool === CanvasTools.DRAW) {
+                if (state.currentTool === CanvasTools.DRAW) {
                     startDraw(x, y)
                 } else {
 
                 }
                 break;
             case State.ACTIVE:
-                if (currentTool === CanvasTools.DRAW) {
+                if (state.currentTool === CanvasTools.DRAW) {
                     activeDraw(x, y);
-                } else if (selectedText != -1) {
                 }
                 break;
             case State.END:
-                if (currentTool === CanvasTools.DRAW) {
+                if (state.currentTool === CanvasTools.DRAW) {
                     endDraw();
-                } else if (selectedText != -1) {
-                    setSelectedText(-1)
                 } else {
-
                     addText(x, y)
                 }
                 break;
@@ -157,46 +273,33 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
     }
 
 
-    let changeData = (removeText: boolean, index: number, newData?: TextData) => {
-        if (!removeText && newData)
-            return setTexts(prevState => {
-                let newState = [...prevState];
-                newState[index] = newData;
-                return newState;
-            })
-        setTexts(prevState => {
-            prevState.splice(index, 1)
-            return [...prevState];
-        })
-    }
     let paths = useMemo(() => {
-        console.log('ran')
-        return lines.map((line, i) => <Path
+        return state.lines.map((line, i) => <Path
             key={i}
             d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
             strokeWidth={line.lineWidth}
             strokeLinecap="round"
             stroke={line.color}
         />)
-    }, [lines])
+    }, [state.lines])
 
-    let selectElement = (index: number) => setSelectedText(index);
-    let clearCanvas = () => {
-        setTexts([]);
-        setLines([]);
-    };
-
-    let enableCanvas = () => {
-        setCanvasState(CanvasState.EDITING)
+    let canvasBtns = useMemo(() => <Canvasbtns sketchState={state} sketchDispatch={dispatch} />, [state.currentTool, state.lineWidth, state.empty])
+    let switchViews = () => {
+        onSubmit();
     }
-    let canvas: SketchCanvas = {
-        render: (
-            <Animated.View style={{ transform: [{ scale }] }}>
+
+    let heartScale = Animated.interpolate(scaleAnim, {
+        inputRange: [0, 1, 2],
+        outputRange: [1, 1.3, 20]
+    });
 
 
+    return (
+        <>
+            <Animated.View style={{ transform: [{ scale: state.scale }] }}>
                 <PanGestureHandler maxPointers={1}
-                    onHandlerStateChange={inPreSubmit ? undefined : handlePanGesture}
-                    onGestureEvent={inPreSubmit ? undefined : handlePanGesture}
+                    onHandlerStateChange={submitting ? undefined : handlePanGesture}
+                    onGestureEvent={submitting ? undefined : handlePanGesture}
                 >
                     <Animated.View>
                         <Svg
@@ -205,39 +308,70 @@ export function useSketchCanvas(width: number, height: number, bannerHeight: num
                                 height: height,
                                 width: width,
                             }}
-                            ref={svgRef}
                         >
                             {paths}
-                            {currentLine &&
+                            {state.currentLine &&
                                 <Path
-                                    d={'M' + currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
-                                    strokeWidth={currentLine.lineWidth}
+                                    d={'M' + state.currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+                                    strokeWidth={state.currentLine.lineWidth}
                                     strokeLinecap="round"
-                                    stroke={currentLine.color}
+                                    stroke={state.currentLine.color}
                                 />}
-                            {inPreSubmit && texts.map((textData, i) =>
-                                <Text
+                            {submitting && state.texts.map((textData, i) =>
+                                <SVGText
                                     x={textData.pos.x}
                                     y={textData.fontSize + textData.pos.y}
                                     fontSize={textData.fontSize}
                                     key={i} fill={textData.color} >{textData.text}
-                                </Text>)
+                                </SVGText>)
                             }
                         </Svg>
                     </Animated.View>
                 </PanGestureHandler>
-                {!inPreSubmit && texts.map((textData, i) => <CanvasTextInput onSelected={selectElement} key={i} textData={textData} canvasWidth={width} index={i} changeData={changeData} canvasHeight={height} />)}
+                {!submitting && state.texts.map((textData, i) =>
+                    <CanvasTextInput key={i}
+                        textData={textData}
+                        canvasWidth={width}
+                        index={i}
+                        sketchDispatch={dispatch}
+                        canvasHeight={height} />)
+                }
             </Animated.View >
-        ),
-        canvasState,
-        currentTool,
-        lineWidth,
-        enableCanvas,
-        clearCanvas,
-        setLineWidth,
-        setColor,
-        setCurrentTool,
-        preSubmit
-    }
-    return canvas;
+            {canvasBtns}
+            {
+                state.canvasState === CanvasState.SUBMITTING &&
+                <Animated.View style={[style.loadingScreen, { opacity: opacityAnim }]}>
+                    <View style={{ height: '40%' }}>
+                        <View style={{ flex: 2, justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{ color: '#FEF4EA', fontSize: 30, paddingBottom: 10, textAlign: 'center' }}>Sending...</Text>
+                        </View>
+                        <Animated.View style={[{ flex: 4 }, {
+                            transform: [{
+                                scale: cond(
+                                    neq(scaleAnim, 2),
+                                    heartScale,
+                                    [
+                                        call([], switchViews),
+                                        heartScale
+                                    ],
+                                )
+                            }]
+                        }]}>
+                            <AntDesign name="heart" size={140} color="#C5261B" />
+                        </Animated.View>
+                    </View>
+                </Animated.View>
+            }
+        </>
+    );
 }
+
+
+const style = StyleSheet.create({
+    loadingScreen: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)'
+    }
+})

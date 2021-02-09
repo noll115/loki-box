@@ -1,35 +1,22 @@
 import { TouchableOpacity, PanGestureHandler, State } from 'react-native-gesture-handler';
 import Animated, {
-    abs,
-    and,
     block,
-    call, ceil, Clock,
+    call,
     cond,
-    debug,
     divide,
-    Easing,
     eq,
-    floor,
     interpolateColors,
     max,
     min,
-    modulo,
-    multiply,
-    neq,
     set,
-    startClock,
-    stopClock,
     sub,
-    timing,
     useValue,
-    Value
 } from 'react-native-reanimated';
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from 'react'
 import { StyleSheet, View, Keyboard, KeyboardEventListener, Text } from 'react-native';
-import { CanvasState, CanvasTools, SketchCanvas } from './SketchCanvas';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
-import { SubmitScreen } from './SubmitScreen';
+import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState } from "./../../../types/sketchCanvas";
 
 
 const BTN_SIZE = 70;
@@ -88,12 +75,8 @@ const ColorSlider: React.FC<{ setColor(col: string): void }> = ({ setColor }) =>
             onGestureEvent={panHandler}
             onHandlerStateChange={panHandler}
         >
-            <Animated.View
-                style={canvasBtnStyle.slider}
-            >
-                <View
-                    style={canvasBtnStyle.gradContainer}
-                >
+            <Animated.View style={canvasBtnStyle.slider}>
+                <View style={canvasBtnStyle.gradContainer}>
                     <LinearGradient
                         onLayout={({ nativeEvent }) => width.setValue(nativeEvent.layout.width)}
                         style={canvasBtnStyle.grad}
@@ -110,7 +93,6 @@ const ColorSlider: React.FC<{ setColor(col: string): void }> = ({ setColor }) =>
                 }]} >
                     <Animated.View style={[canvasBtnStyle.selectorInner, { backgroundColor: selectorCol as any }]} />
                 </Animated.View>
-
             </Animated.View>
         </PanGestureHandler >
     )
@@ -180,45 +162,63 @@ const StrokeSlider: React.FC<{ setLineWidth(width: number): void, lineWidth: num
 
 
 
-interface canvasBtnProps {
-    sketchCanvas: SketchCanvas
-}
 
 
-function DrawingBtns(sketchCanvas: SketchCanvas) {
-    let { currentTool } = sketchCanvas;
+function DrawingBtns(sketchState: SketchState, sketchDispatch: React.Dispatch<ReducerActions>) {
+    let { currentTool, lineWidth } = sketchState
+
     let txtAddition = currentTool === CanvasTools.TEXT ? 'Text' : 'Stroke';
+
+    let setColor = (color: string) => {
+        sketchDispatch({ type: CanvasActions.SET_COLOR, color })
+    }
+
+    let setLineWidth = (lineWidth: number) => {
+        sketchDispatch({ type: CanvasActions.SET_LINEWIDTH, lineWidth })
+    }
+
+    let switchTools = () => {
+        let nextTool = currentTool === CanvasTools.TEXT ? CanvasTools.DRAW : CanvasTools.TEXT;
+        sketchDispatch({ type: CanvasActions.SET_TOOL, tool: nextTool })
+    }
+    let clearCanvas = () => {
+        sketchDispatch({ type: CanvasActions.CLEAR_CANVAS });
+    }
+    let submit = () => {
+        sketchDispatch({ type: CanvasActions.SET_STATE, state: CanvasState.SUBMITTING });
+    }
     return (
         <View style={{ width: '100%', height: '100%' }}>
             <View style={{ flex: 4, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={canvasBtnStyle.sliderText}>{txtAddition} Color:</Text>
-                <ColorSlider setColor={sketchCanvas.setColor} />
+                <ColorSlider setColor={setColor} />
                 <Text style={canvasBtnStyle.sliderText}>{txtAddition} Size:</Text>
-                <StrokeSlider setLineWidth={sketchCanvas.setLineWidth} lineWidth={sketchCanvas.lineWidth} />
+                <StrokeSlider setLineWidth={setLineWidth} lineWidth={lineWidth} />
             </View>
             <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                <TouchableOpacity style={canvasBtnStyle.modeBtn}
-                    onPress={() => sketchCanvas.preSubmit()}
+                <TouchableOpacity style={[canvasBtnStyle.modeBtn, sketchState.empty && canvasBtnStyle.modeBtnDisabled]}
+                    onPress={submit}
+                    disabled={sketchState.empty}
                 >
                     <MaterialCommunityIcons name="send" size={BTN_SIZE / 3} color="black" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={() => sketchCanvas.clearCanvas()}
+                    onPress={clearCanvas}
                     style={[canvasBtnStyle.modeBtn, { backgroundColor: '#8C1C13' }]}
                 >
                     <Feather name="trash-2" size={BTN_SIZE / 3} color="#FEF4EA" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={() => sketchCanvas.setCurrentTool(CanvasTools.TEXT)}
-                    style={[canvasBtnStyle.modeBtn, sketchCanvas.currentTool === CanvasTools.TEXT && canvasBtnStyle.modeBtnSelected]}
-                    disabled={sketchCanvas.currentTool === CanvasTools.TEXT}
+                    onPress={switchTools}
+                    style={[canvasBtnStyle.modeBtn, currentTool === CanvasTools.TEXT && canvasBtnStyle.modeBtnSelected]}
+                    disabled={currentTool === CanvasTools.TEXT}
                 >
                     <MaterialCommunityIcons name="text-box-plus-outline" size={BTN_SIZE / 3} color="black" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={() => sketchCanvas.setCurrentTool(CanvasTools.DRAW)}
-                    style={[canvasBtnStyle.modeBtn, sketchCanvas.currentTool === CanvasTools.DRAW && canvasBtnStyle.modeBtnSelected]}
-                    disabled={sketchCanvas.currentTool === CanvasTools.DRAW}
+                    onPress={switchTools}
+                    style={[canvasBtnStyle.modeBtn, currentTool === CanvasTools.DRAW && canvasBtnStyle.modeBtnSelected]}
+                    disabled={currentTool === CanvasTools.DRAW}
                 >
                     <MaterialCommunityIcons name="draw" size={BTN_SIZE / 3} color="black" />
                 </TouchableOpacity>
@@ -228,16 +228,17 @@ function DrawingBtns(sketchCanvas: SketchCanvas) {
 }
 
 
+interface canvasBtnProps {
+    sketchState: SketchState,
+    sketchDispatch: React.Dispatch<ReducerActions>
+}
 
-export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchCanvas }) => {
+export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchState, sketchDispatch }) => {
 
-    let isEditing = sketchCanvas.canvasState === CanvasState.EDITING;
-    console.log(isEditing);
 
     return (
         <View style={canvasBtnStyle.container}>
-            {isEditing && DrawingBtns(sketchCanvas)}
-            {!isEditing && <SubmitScreen />}
+            {DrawingBtns(sketchState, sketchDispatch)}
         </View>
     )
 }
@@ -263,11 +264,17 @@ const canvasBtnStyle = StyleSheet.create({
         },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
-
         elevation: 5,
     },
-    modeBtnSelected: {
+    modeBtnDisabled: {
+        shadowOpacity: 0,
+        elevation: 0,
         backgroundColor: '#FFB8D0'
+    },
+    modeBtnSelected: {
+        backgroundColor: '#FFB8D0',
+        shadowOpacity: 0,
+        elevation: 0,
     },
     sliderText: {
         fontSize: 20,
