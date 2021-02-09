@@ -1,3 +1,5 @@
+import { Line, TextData } from "./sketchCanvas";
+
 export interface IBox {
     box: string,
     seenAs: string,
@@ -10,10 +12,15 @@ export interface INewBox {
     seenAs: string
 }
 
+export interface IMessageData {
+    lines: Line[],
+    texts: TextData[]
+}
+
 export interface IMessage {
     from: string,
     to: string,
-    buffer: Buffer,
+    data: IMessageData,
     seen: boolean,
     sentTime: Date
 }

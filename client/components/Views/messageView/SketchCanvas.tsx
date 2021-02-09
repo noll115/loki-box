@@ -1,12 +1,14 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useReducer, useRef, useState } from "react";
+import React, { useEffect, useMemo, useReducer, } from "react";
 import { StyleSheet, useWindowDimensions, View, Text } from "react-native";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
-import Animated, { and, block, call, Clock, cond, debug, Easing, eq, greaterOrEq, neq, not, onChange, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import Animated, { and, block, call, Clock, cond, Easing, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
 import { Path, Svg, Text as SVGText } from 'react-native-svg'
 import { Canvasbtns } from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
 import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState } from "./../../../types/sketchCanvas";
 import { AntDesign } from "@expo/vector-icons";
+import { Socket } from "socket.io-client";
+import { IBox, IMessageData } from "../../../types/general";
 
 
 let INIT_STATE: SketchState = {
@@ -176,19 +178,22 @@ interface Props {
     width: number,
     height: number,
     bannerHeight: number,
-    onSubmit(): void
+    onSubmit(): void,
+    socket: Socket,
+    box: IBox
 }
 
 
-export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onSubmit }) => {
+export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onSubmit, socket, box }) => {
     let [state, dispatch] = useReducer(canvasReducer, INIT_STATE);
-    console.log(CanvasState[state.canvasState]);
     const window = useWindowDimensions()
     let submitting = state.canvasState === CanvasState.SUBMITTING;
 
     let animateHeart = useValue<number>(0);
     let clock1 = new Clock();
     let clock2 = new Clock();
+    let scaleAnim = heartAnim(clock1, animateHeart)
+    let opacityAnim = animateOpacity(clock2, animateHeart);
 
     useEffect(() => {
         let scale = (window.width - 20) / width;
@@ -197,15 +202,24 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 
     useEffect(() => {
         if (state.canvasState === CanvasState.SUBMITTING) {
-            animateHeart.setValue(1)
-            setTimeout(() => {
-                animateHeart.setValue(2)
-            }, 3000);
+            animateHeart.setValue(1);
+            let msgData: IMessageData = {
+                texts: state.texts,
+                lines: state.lines
+            }
+
+            socket.emit('sendMsg', box.box, msgData, resp => {
+                console.log(resp);
+
+                if (resp.status === 'ok') {
+                    return animateHeart.setValue(2);
+                }
+                dispatch({ type: CanvasActions.SET_STATE, state: CanvasState.EDITING })
+                animateHeart.setValue(0);
+            })
         }
     }, [state.canvasState])
 
-    let scaleAnim = heartAnim(clock1, animateHeart)
-    let opacityAnim = animateOpacity(clock2, animateHeart);
 
 
     const addText = (x: number, y: number) => {

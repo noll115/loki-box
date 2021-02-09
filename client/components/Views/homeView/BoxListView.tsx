@@ -2,13 +2,14 @@ import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import Button from '../../Button';
 import { Feather, FontAwesome } from "@expo/vector-icons";
 import QRScanner, { ScannedBox } from './QRScanner';
-import { StatusBar, StyleSheet, Text, View, Animated } from 'react-native';
+import { StyleSheet, Text, View, Animated } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react'
 import { StackNavProp } from './homeViewNav';
-import { Logout, RootState, SelectBox } from '../../../redux';
+import { RootState, SelectBox } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
 import BoxListHeader from '../../BoxListHeader';
 import DrawerMenu from '../../DrawerMenu';
+import { MessageList } from '../../MessageList';
 
 
 const mapState = (state: RootState) => ({
@@ -27,7 +28,6 @@ type Props = ConnectedProps<typeof connector> & StackNavProp<'BoxList'>
 const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
     const [viewCam, setViewCam] = useState(false);
     let { boxes, messages, selectedBox } = user;
-    let boxMessages: JSX.Element[] | null = null;
     const [BoxMenuOpen, setBoxMenuOpen] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -44,9 +44,7 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
     if (!boxes)
         return null;
 
-    if (selectedBox) {
-        boxMessages = messages[selectedBox.box].map(msg => <Text>{msg.to}</Text>);
-    }
+
 
     const OnScanBox = (box: ScannedBox) => {
         console.log(box);
@@ -107,9 +105,7 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
     return (
         <>
             <BoxListHeader onOpenBoxMenu={() => setBoxMenuOpen(true)} />
-            <ScrollView >
-                {boxMessages}
-            </ScrollView>
+            {selectedBox && <MessageList selectedBox={selectedBox} messages={messages} />}
             <View style={{ flexDirection: 'row', position: 'absolute', width: '100%', height: 70, bottom: '4%', paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center' }}>
                 {selectedBox && <Button title='Send a Message' onPress={() => {
                     navigation.navigate('SendMessage', {

@@ -3,7 +3,6 @@ import mongoose, { Document, Model, Schema, VirtualType } from "mongoose";
 import { BoxClass } from "./box";
 import * as util from "../util";
 import { DocumentType, getModelForClass, isDocument, isDocumentArray, isRefType, modelOptions, pre, prop, Ref } from "@typegoose/typegoose";
-import { UserSocket } from "../../types/general";
 
 
 export enum Roles {
@@ -14,10 +13,10 @@ export enum Roles {
 
 
 export class UserBoxesClass {
-    @prop()
+    @prop({ required: true })
     public boxName!: string
 
-    @prop()
+    @prop({ required: true })
     public seenAs!: string
 
     @prop({ ref: () => BoxClass })

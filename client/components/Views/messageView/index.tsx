@@ -1,6 +1,6 @@
-import { Dimensions, GestureResponderEvent, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { RootState } from '../../../redux';
+import { StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react'
+import { RootState, RefreshMessages } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../homeView/homeViewNav';
 import { SketchCanvas } from './SketchCanvas';
@@ -11,16 +11,18 @@ let selectorSize = 50
 
 
 const mapState = (state: RootState) => ({
-    user: state.user
+    user: state.user,
+    socketState: state.socket
 })
 
 const mapDispatch = {
+    RefreshMessages
 }
 
 const connector = connect(mapState, mapDispatch);
 
 type Props = ConnectedProps<typeof connector> & StackNavProp<'SendMessage'>
-const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
+const _MessageView: React.FC<Props> = ({ user, route, navigation, socketState: { socket }, RefreshMessages }) => {
     let [sketchSubmitted, setSketchSubmitted] = useState(false);
     let { box } = route.params
     let [bannerHeight, setBannerHeight] = useState(0);
@@ -30,7 +32,7 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
     }
 
     const onDone = () => {
-        navigation.pop()
+        RefreshMessages().then(() => navigation.pop())
     }
 
 
@@ -44,7 +46,7 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation }) => {
                         <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
                     </View>
                     <View style={styles.body}>
-                        <SketchCanvas height={240} width={320} bannerHeight={bannerHeight} onSubmit={submit} />
+                        {socket && <SketchCanvas height={240} width={320} bannerHeight={bannerHeight} onSubmit={submit} socket={socket} box={box} />}
                     </View>
                 </>
             }

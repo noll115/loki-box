@@ -1,4 +1,4 @@
-import { IBox, IMessage, INewBox } from "./general";
+import { IBox, IMessage, IMessageData, INewBox } from "./general";
 
 interface socketStatus {
     status: 'ok' | 'failed'
@@ -19,7 +19,7 @@ declare module 'socket.io-client' {
     interface Socket {
         emit(str: 'getBoxes', cb: (newBoxes: IMessage[]) => void): void
         emit(str: 'registerBox', newBox: INewBox, cb: (res: socketStatus) => void): void
-        emit(str: 'sendMsg', boxID: string, msg: string, cb: (res: socketStatus) => void): void
+        emit(str: 'sendMsg', boxID: string, msg: IMessageData, cb: (res: socketStatus) => void): void
         emit(str: 'removeBox', boxID: string, cb: (res: socketStatus) => void): void
         emit(str: 'getMsgHistory', boxID: string, cb: (res: getMsgStatus) => void): void
     }

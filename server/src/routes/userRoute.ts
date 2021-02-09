@@ -5,7 +5,7 @@ import { HttpException, INewBox, JWTUserData, NameSpaces, UserSocket } from "../
 import * as jwt from "jsonwebtoken";
 import adminRoute from "./adminRoute";
 import { SocketVerifyUserJWT } from "../lib/passport";
-import messageModel from "../lib/mongoDB/message";
+import messageModel, { Message } from "../lib/mongoDB/message";
 import { PassportStatic } from "passport";
 import { RedisSocket } from "../lib/redis";
 
@@ -88,24 +88,31 @@ export default (passport: PassportStatic, redis: RedisSocket, namespaces: NameSp
             }
         });
 
-        socket.on("sendMsg", async (boxID: string, msg: Buffer, cb: Function) => {
+        socket.on("sendMsg", async (boxID: string, msg: Message, cb: Function) => {
             let box = socket.user.getBox(boxID);
-            if (box) {
-                let boxSocket = await redis.getSocket('box', boxID);
-                if (boxSocket) {
+            try {
+                if (box) {
+                    let boxSocket = await redis.getSocket('box', boxID);
                     const newMsg = await messageModel.create({
                         data: msg,
                         from: socket.user.id,
-                        to: boxID
+                        to: boxID,
                     });
-                    let socketInstance = namespaces.box.sockets.get(boxSocket);
-                    if (socketInstance) {
-                        socketInstance.emit('sendMsg', newMsg.data, newMsg.from, box.seenAs)
-                        cb({ status: 'ok' })
+                    if (boxSocket) {
+                        let socketInstance = namespaces.box.sockets.get(boxSocket);
+                        if (socketInstance) {
+                            socketInstance.emit('sendMsg', newMsg.data, newMsg.from, box.seenAs)
+                        }
                     }
+                    cb({ status: 'ok' })
                 }
+                cb({ status: "failed" })
+            } catch (error) {
+                console.log(error);
+
+                cb({ status: "failed" })
+
             }
-            cb({ status: "failed" })
         });
         socket.on("removeBox", async (boxID: string, cb: Function) => {
             try {

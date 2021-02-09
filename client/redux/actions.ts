@@ -133,24 +133,17 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
         socket.on('boxes', (boxes: IBox[]) => {
 
             let hasPrevSelected = getState().user.selectedBox;
-            if (hasPrevSelected) {
-                dispatch({
-                    type: UserActionTypes.UPDATE_BOXES,
-                    payload: {
-                        boxes
-                    }
-                })
-            }
-            else if (boxes.length > 0) {
-                socket.emit('getMsgHistory', boxes[0].box, (res) => {
-
+            if (boxes.length > 0 && !hasPrevSelected) {
+                socket.emit('getMsgHistory', boxes[0].box, res => {
                     if (res.status === 'ok') {
+                        console.log(res.msgs);
+                        
                         dispatch({
                             type: UserActionTypes.UPDATE_BOXES,
                             payload: {
                                 boxes,
                                 selectedBox: boxes[0],
-                                messages: res.msgs
+                                messages: res.msgs.map(msg => ({ ...msg, sentTime: new Date(msg.sentTime) }))
                             }
                         })
                     }
@@ -184,20 +177,37 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
     }
 }
 
-export const SelectBox = (box: IBox): ThunkAction<void, RootState, string, UserActions> => {
-    return async (dispatch, getState, api) => {
-        let socket = getState().socket.socket;
-        socket?.emit('getMsgHistory', box.box, (data) => {
-            if (data.status === 'ok') {
-                return dispatch({
-                    type: UserActionTypes.SELECT_BOX,
-                    payload: {
-                        box,
-                        messages: data.msgs
+export const SelectBox = (box: IBox): ThunkAction<Promise<void>, RootState, string, UserActions> => {
+    return async (dispatch, getState) => {
+        return dispatch(RefreshMessages(box))
+    }
+}
+
+
+export const RefreshMessages = (box?: IBox): ThunkAction<Promise<void>, RootState, string, UserActions> => {
+    return async (dispatch, getState) => {
+        return new Promise((res, rej) => {
+            let { socket: socketState, user } = getState();
+            let { socket } = socketState;
+            let selectedBox = box || user.selectedBox;
+            if (socket && selectedBox)
+                socket.emit('getMsgHistory', selectedBox.box, data => {
+                    
+                    if (data.status === 'ok') {
+                        console.log(data.msgs);
+                        dispatch({
+                            type: UserActionTypes.SELECT_BOX,
+                            payload: {
+                                box: selectedBox!,
+                                messages: data.msgs.map(msg => ({ ...msg, sentTime: new Date(msg.sentTime) }))
+                            }
+                        })
+                        return res()
                     }
+                    rej()
                 })
-            }
         })
+
     }
 }
 
