@@ -9,10 +9,7 @@ export enum CanvasState {
     SUBMITTED
 }
 
-export interface Point {
-    x: number,
-    y: number
-}
+export type Point = [number, number]
 
 export interface Line {
     color: string

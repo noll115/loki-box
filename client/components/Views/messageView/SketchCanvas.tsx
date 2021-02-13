@@ -5,7 +5,7 @@ import Animated, { and, block, call, Clock, cond, Easing, eq, neq, not, set, sta
 import { Path, Svg, Text as SVGText } from 'react-native-svg'
 import { Canvasbtns } from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
-import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState } from "./../../../types/sketchCanvas";
+import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState, Point } from "./../../../types/sketchCanvas";
 import { AntDesign } from "@expo/vector-icons";
 import { Socket } from "socket.io-client";
 import { IBox, IMessageData } from "../../../types/general";
@@ -227,7 +227,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
         let newText = {
             text: '',
             fontSize: state.lineWidth,
-            pos: { x, y },
+            pos: [x, y] as Point,
             color: state.color
         };
         dispatch({ type: CanvasActions.ADD_TEXT, text: newText })
@@ -235,10 +235,11 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 
 
     let startDraw = (x: number, y: number) => {
+        let point: Point = [x, y];
         let newLine = {
             color: state.color,
             lineWidth: state.lineWidth,
-            points: [{ x, y }]
+            points: [point]
         }
         dispatch({ type: CanvasActions.SET_CURRENTLINE, line: newLine })
     }
@@ -247,7 +248,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
         y = Math.min(Math.max(0, y), height);
         let line = state.currentLine;
         if (line) {
-            dispatch({ type: CanvasActions.SET_CURRENTLINE, line: { ...line, points: [...line.points, { x, y }] } })
+            dispatch({ type: CanvasActions.SET_CURRENTLINE, line: { ...line, points: [...line.points, [x, y]] } })
         }
     }
 
@@ -290,7 +291,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
     let paths = useMemo(() => {
         return state.lines.map((line, i) => <Path
             key={i}
-            d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+            d={'M' + line.points.map(([x, y]) => `${x} ${y}`).join(' L ')}
             strokeWidth={line.lineWidth}
             strokeLinecap="round"
             stroke={line.color}
@@ -326,15 +327,15 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
                             {paths}
                             {state.currentLine &&
                                 <Path
-                                    d={'M' + state.currentLine.points.map(p => `${p.x} ${p.y}`).join(' L ')}
+                                    d={'M' + state.currentLine.points.map(([x, y]) => `${x} ${y}`).join(' L ')}
                                     strokeWidth={state.currentLine.lineWidth}
                                     strokeLinecap="round"
                                     stroke={state.currentLine.color}
                                 />}
                             {submitting && state.texts.map((textData, i) =>
                                 <SVGText
-                                    x={textData.pos.x}
-                                    y={textData.fontSize + textData.pos.y}
+                                    x={textData.pos[0]}
+                                    y={textData.fontSize + textData.pos[1]}
                                     fontSize={textData.fontSize}
                                     key={i} fill={textData.color} >{textData.text}
                                 </SVGText>)
