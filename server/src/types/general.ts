@@ -48,3 +48,6 @@ export interface INewBox {
     seenAs: string
 }
 
+export interface SocketsOnline {
+    [index: string]: string
+}

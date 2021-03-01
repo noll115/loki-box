@@ -21,7 +21,8 @@ if (process.env.DB) {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         useCreateIndex: true,
-        dbName: "loki-box"
+        dbName: "loki-box",
+        useFindAndModify: false
     });
     mongoose_1.default.connection.on('connected', function () {
         console.log('Mongoose default connection open to ' + process.env.DB);

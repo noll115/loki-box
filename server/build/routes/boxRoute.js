@@ -64,15 +64,15 @@ var jwt = __importStar(require("jsonwebtoken"));
 var general_1 = require("../types/general");
 var passport_1 = require("../lib/passport");
 var message_1 = __importDefault(require("../lib/mongoDB/message"));
-exports.default = (function (passport, redis, namespaces) {
+exports.default = (function (passport, sockets, namespaces) {
     var router = express_1.Router();
-    router.get("/auth", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    router.post("/auth", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
         var secretToken, boxId, box, verified, boxData, token;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    secretToken = req.query.token;
-                    boxId = req.query.boxId;
+                    secretToken = req.body["token"];
+                    boxId = req.body["boxID"];
                     return [4 /*yield*/, mongoDB_1.boxModel.findById(boxId)];
                 case 1:
                     box = _a.sent();
@@ -94,19 +94,35 @@ exports.default = (function (passport, redis, namespaces) {
     }); });
     namespaces.box.use(passport_1.SocketVerifyBoxJWT);
     namespaces.box.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0, function () {
-        var msgs;
+        var msg;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, redis.addSocket(socket.box, socket.id)];
+                case 0:
+                    sockets[socket.box.id] = socket.id;
+                    return [4 /*yield*/, message_1.default.find({ to: socket.box.id, seen: false }).sort('-sentTime').select('-seen -to -sentTime -__v').limit(1).lean()];
                 case 1:
-                    _a.sent();
-                    return [4 /*yield*/, message_1.default.find({ to: socket.box.id }).sort('-sentTime').lean()];
-                case 2:
-                    msgs = _a.sent();
-                    socket.emit('recieveMsgs', msgs);
-                    socket.on('seenMsg', function (msgID) {
-                        message_1.default.findByIdAndUpdate(msgID, { seen: true });
-                    });
+                    msg = _a.sent();
+                    socket.emit('getMsg', msg[0]);
+                    socket.on('seenMsg', function (msgID) { return __awaiter(void 0, void 0, void 0, function () {
+                        return __generator(this, function (_a) {
+                            message_1.default.findByIdAndUpdate(msgID, { seen: true }).exec();
+                            return [2 /*return*/];
+                        });
+                    }); });
+                    socket.on('getMsg', function (cb) { return __awaiter(void 0, void 0, void 0, function () {
+                        var msg;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    console.log("GET NEW MSG");
+                                    return [4 /*yield*/, message_1.default.find({ to: socket.box.id, seen: false }).sort('-sentTime').select('-seen -to -sentTime -__v').limit(1).lean()];
+                                case 1:
+                                    msg = _a.sent();
+                                    cb(msg[0]);
+                                    return [2 /*return*/];
+                            }
+                        });
+                    }); });
                     return [2 /*return*/];
             }
         });

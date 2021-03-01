@@ -1,15 +1,14 @@
 import { Router } from "express";
 import { IVerifyOptions } from "passport-local";
 import { UserBoxesClass, boxModel, userModel } from "../lib/mongoDB";
-import { HttpException, INewBox, JWTUserData, NameSpaces, UserSocket } from "../types/general";
+import { HttpException, INewBox, JWTUserData, NameSpaces, SocketsOnline, UserSocket } from "../types/general";
 import * as jwt from "jsonwebtoken";
 import adminRoute from "./adminRoute";
 import { SocketVerifyUserJWT } from "../lib/passport";
 import messageModel, { Message } from "../lib/mongoDB/message";
 import { PassportStatic } from "passport";
-import { RedisSocket } from "../lib/redis";
 
-export default (passport: PassportStatic, redis: RedisSocket, namespaces: NameSpaces) => {
+export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: NameSpaces) => {
     let router = Router();
 
     router.post("/register", async (req, res, next) => {
@@ -49,7 +48,7 @@ export default (passport: PassportStatic, redis: RedisSocket, namespaces: NameSp
 
 
     namespaces.user.on('connection', async (socket: UserSocket) => {
-        await redis.addSocket(socket.user, socket.id);
+        sockets[socket.user.id] = socket.id;
         socket.emit('boxes', socket.user.boxes)
 
         socket.on("getBoxes", async (cb) => {
@@ -90,9 +89,11 @@ export default (passport: PassportStatic, redis: RedisSocket, namespaces: NameSp
 
         socket.on("sendMsg", async (boxID: string, msg: Message, cb: Function) => {
             let box = socket.user.getBox(boxID);
+
+
             try {
                 if (box) {
-                    let boxSocket = await redis.getSocket('box', boxID);
+                    let boxSocket = sockets[boxID] || null;
                     const newMsg = await messageModel.create({
                         data: msg,
                         from: socket.user.id,
@@ -126,7 +127,7 @@ export default (passport: PassportStatic, redis: RedisSocket, namespaces: NameSp
         socket.on('getMsgHistory', async (boxID: string, cb: Function) => {
             let box = socket.user.getBox(boxID);
             if (box) {
-                let msgs = await messageModel.find({ from: socket.user.id }).sort('-sentTime').lean();
+                let msgs = await messageModel.find({ from: socket.user.id }).select('-__v -from').sort('-sentTime').lean();
                 cb({ status: 'ok', msgs });
             }
             cb({ status: 'failed' })

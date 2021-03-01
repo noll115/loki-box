@@ -9,18 +9,17 @@ export enum CanvasState {
     SUBMITTED
 }
 
-export type Point = [number, number]
 
 export interface Line {
     color: string
-    points: Point[]
+    points: number[]
     lineWidth: number
 }
 
 export interface TextData {
     text: string,
     fontSize: number,
-    pos: Point,
+    pos: [number, number],
     color: string,
 }
 

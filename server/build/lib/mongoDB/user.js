@@ -77,11 +77,11 @@ var UserBoxesClass = /** @class */ (function () {
     function UserBoxesClass() {
     }
     __decorate([
-        typegoose_1.prop(),
+        typegoose_1.prop({ required: true }),
         __metadata("design:type", String)
     ], UserBoxesClass.prototype, "boxName", void 0);
     __decorate([
-        typegoose_1.prop(),
+        typegoose_1.prop({ required: true }),
         __metadata("design:type", String)
     ], UserBoxesClass.prototype, "seenAs", void 0);
     __decorate([

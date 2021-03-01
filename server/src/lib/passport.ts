@@ -1,6 +1,5 @@
 import { Strategy as jwtStrategy, ExtractJwt, StrategyOptions } from "passport-jwt";
 import { Strategy as localStrategy } from "passport-local";
-import { PassportStatic } from "passport";
 import { boxModel, userModel, Roles } from "./mongoDB";
 import { BoxSocket, JWTBoxData, JWTUserData, UserSocket } from "../types/general";
 import { Socket } from "socket.io";

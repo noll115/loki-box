@@ -1,15 +1,14 @@
 import { DocumentType, getModelForClass, ModelOptions, prop, Ref, ReturnModelType } from "@typegoose/typegoose";
 import { UserClass } from "./user";
 import { BoxClass } from './box'
-import { number } from "joi";
 
 
 
 export class Line {
     @prop({ required: true })
     public color!: string
-    @prop({ type: [number, number], _id: false, required: true })
-    public points!: [number, number][]
+    @prop({ type: Number, required: true })
+    public points!: number[]
     @prop({ required: true })
     public lineWidth!: number
 }
@@ -19,7 +18,7 @@ export class TextData {
     public text!: string
     @prop({ required: true })
     public fontSize!: number
-    @prop({ type: number, _id: false, required: true })
+    @prop({ type: Number, required: true })
     public pos!: number[]
     @prop({ required: true })
     public color!: string

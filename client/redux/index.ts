@@ -3,7 +3,7 @@ import { rootReducer } from "./reducers"
 import { applyMiddleware, createStore, compose } from 'redux';
 export * from "./actions";
 
-const api = "http://192.168.1.5:3000";
+const api = "http://192.168.1.4:3000";
 
 
 const composeEnhancers = (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;

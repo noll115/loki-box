@@ -51,7 +51,7 @@ var userOptions = {
     algorithms: ["HS256"]
 };
 var boxOptions = {
-    jwtFromRequest: passport_jwt_1.ExtractJwt.fromUrlQueryParameter("jwt"),
+    jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
     secretOrKey: process.env.BOX_SECRET,
     ignoreExpiration: true,
     algorithms: ["HS256"]
@@ -145,7 +145,6 @@ function SocketVerifyBoxJWT(socket, next) {
     passport_1.default.authenticate('box-jwt', { session: false }, function (err, box, info) {
         if (!box || err)
             return boxSocket.emit('jwt failed');
-        console.log(box);
         boxSocket.box = box;
         next();
     })(boxSocket.request, {}, next);

@@ -5,7 +5,7 @@ import Animated, { and, block, call, Clock, cond, Easing, eq, neq, not, set, sta
 import { Path, Svg, Text as SVGText } from 'react-native-svg'
 import { Canvasbtns } from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
-import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState, Point } from "./../../../types/sketchCanvas";
+import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState, Line, TextData } from "./../../../types/sketchCanvas";
 import { AntDesign } from "@expo/vector-icons";
 import { Socket } from "socket.io-client";
 import { IBox, IMessageData } from "../../../types/general";
@@ -207,6 +207,8 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
                 texts: state.texts,
                 lines: state.lines
             }
+            console.log(msgData);
+
 
             socket.emit('sendMsg', box.box, msgData, resp => {
                 console.log(resp);
@@ -224,22 +226,22 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 
     const addText = (x: number, y: number) => {
 
-        let newText = {
+        let newText: TextData = {
             text: '',
             fontSize: state.lineWidth,
-            pos: [x, y] as Point,
+            pos: [x, y],
             color: state.color
         };
+
         dispatch({ type: CanvasActions.ADD_TEXT, text: newText })
     }
 
 
     let startDraw = (x: number, y: number) => {
-        let point: Point = [x, y];
         let newLine = {
             color: state.color,
             lineWidth: state.lineWidth,
-            points: [point]
+            points: [x, y]
         }
         dispatch({ type: CanvasActions.SET_CURRENTLINE, line: newLine })
     }
@@ -248,7 +250,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
         y = Math.min(Math.max(0, y), height);
         let line = state.currentLine;
         if (line) {
-            dispatch({ type: CanvasActions.SET_CURRENTLINE, line: { ...line, points: [...line.points, [x, y]] } })
+            dispatch({ type: CanvasActions.SET_CURRENTLINE, line: { ...line, points: [...line.points, x, y] } })
         }
     }
 
@@ -289,13 +291,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 
 
     let paths = useMemo(() => {
-        return state.lines.map((line, i) => <Path
-            key={i}
-            d={'M' + line.points.map(([x, y]) => `${x} ${y}`).join(' L ')}
-            strokeWidth={line.lineWidth}
-            strokeLinecap="round"
-            stroke={line.color}
-        />)
+        return state.lines.map((line, i) => createPath(line,i))
     }, [state.lines])
 
     let canvasBtns = useMemo(() => <Canvasbtns sketchState={state} sketchDispatch={dispatch} />, [state.currentTool, state.lineWidth, state.empty])
@@ -325,13 +321,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
                             }}
                         >
                             {paths}
-                            {state.currentLine &&
-                                <Path
-                                    d={'M' + state.currentLine.points.map(([x, y]) => `${x} ${y}`).join(' L ')}
-                                    strokeWidth={state.currentLine.lineWidth}
-                                    strokeLinecap="round"
-                                    stroke={state.currentLine.color}
-                                />}
+                            {state.currentLine && createPath(state.currentLine)}
                             {submitting && state.texts.map((textData, i) =>
                                 <SVGText
                                     x={textData.pos[0]}
@@ -390,3 +380,20 @@ const style = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.3)'
     }
 })
+
+function createPath(line: Line, index?: number) {
+    let { points, lineWidth, color } = line;
+    let d = `M ${points[0]} ${points[1]}`;
+    for (let i = 2; i < points.length; i += 2) {
+        d += ` L ${points[i]} ${points[i + 1]}`;
+    }
+    return (
+        <Path
+            key={index}
+            d={d}
+            strokeWidth={lineWidth}
+            strokeLinecap="round"
+            stroke={color}
+        />
+    )
+}
