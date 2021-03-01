@@ -4,18 +4,11 @@ import { BoxClass } from './box'
 
 
 
-class Point {
-    @prop({ required: true })
-    public x!: number
-    @prop({ required: true })
-    public y!: number
-}
-
 export class Line {
     @prop({ required: true })
     public color!: string
-    @prop({ type: Point, _id: false, required: true })
-    public points!: Point[]
+    @prop({ type: Number, required: true })
+    public points!: number[]
     @prop({ required: true })
     public lineWidth!: number
 }
@@ -25,8 +18,8 @@ export class TextData {
     public text!: string
     @prop({ required: true })
     public fontSize!: number
-    @prop({ _id: false, required: true })
-    public pos!: Point
+    @prop({ type: Number, required: true })
+    public pos!: number[]
     @prop({ required: true })
     public color!: string
 }

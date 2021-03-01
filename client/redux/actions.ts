@@ -136,8 +136,6 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
             if (boxes.length > 0 && !hasPrevSelected) {
                 socket.emit('getMsgHistory', boxes[0].box, res => {
                     if (res.status === 'ok') {
-                        console.log(res.msgs);
-                        
                         dispatch({
                             type: UserActionTypes.UPDATE_BOXES,
                             payload: {

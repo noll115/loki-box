@@ -42,8 +42,8 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     let textHeight = useValue(0);
     let dragX = useValue(0);
     let dragY = useValue(0);
-    let offsetX = useValue(textData.pos.x);
-    let offsetY = useValue(textData.pos.y);
+    let offsetX = useValue(textData.pos[0]);
+    let offsetY = useValue(textData.pos[1]);
     let gestureState = useValue(-1);
     let textDataRef = useRef<TextData>(textData);
 
@@ -62,7 +62,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     }
 
     let updatePos = ([x, y]: readonly number[]) => {
-        sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current, pos: { x, y } } })
+        sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current, pos: [x, y] } })
     }
 
     let onGesturePan = Animated.event([

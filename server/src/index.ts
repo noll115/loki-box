@@ -3,9 +3,8 @@ import "./lib/mongoDB";
 import boxRoute from "./routes/boxRoute";
 import passport from "./lib/passport";
 import userRoute from "./routes/userRoute";
-import { HttpException, NameSpaces } from "./types/general";
+import { HttpException, NameSpaces, SocketsOnline } from "./types/general";
 import { Server } from 'socket.io'
-import { createRedisAdapter, RedisSocket } from "./lib/redis";
 
 
 const app = express();
@@ -15,11 +14,8 @@ server.listen(process.env.PORT, () => {
 })
 let io = new Server(server, { serveClient: false });
 
-let { adapter, redisClient } = createRedisAdapter();
+const sockets: SocketsOnline = {}
 
-let redisSocket = new RedisSocket(redisClient);
-
-io.adapter(adapter)
 let nameSpaces: NameSpaces = { user: io.of("/user"), box: io.of("/box") }
 
 app.get("/", (req, res) => {
@@ -28,8 +24,8 @@ app.get("/", (req, res) => {
 app.use(express.json())
 app.use(passport.initialize())
 
-app.use("/user", userRoute(passport, redisSocket, nameSpaces));
-app.use("/box", boxRoute(passport, redisSocket, nameSpaces));
+app.use("/user", userRoute(passport, sockets, nameSpaces));
+app.use("/box", boxRoute(passport, sockets, nameSpaces));
 
 
 let ErrorHandler: ErrorRequestHandler = (err: HttpException, req, res, next) => {

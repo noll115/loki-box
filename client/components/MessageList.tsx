@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { IBox, IMessage } from '../types/general';
 import { ScrollView } from 'react-native-gesture-handler';
 import Svg, { Path, Text as SVGText } from 'react-native-svg';
+import { Line } from '../types/sketchCanvas';
 
 
 interface Props {
@@ -36,22 +37,12 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
         <View key={index} style={{ justifyContent: 'center', alignItems: 'center', marginBottom: 40 }}>
             <View style={{ width: 320, height: 240 }}>
                 <Svg style={{ backgroundColor: 'black', width: 320, height: 240 }}>
-                    {
-                        lines.map((line, i) => (
-                            <Path
-                                key={i}
-                                d={'M' + line.points.map(p => `${p.x} ${p.y}`).join(' L ')}
-                                strokeWidth={line.lineWidth}
-                                strokeLinecap="round"
-                                stroke={line.color}
-                            />
-                        ))
-                    }
+                    {lines.map((line, i) => createPath(line, i))}
                     {
                         texts.map((textData, i) => (
                             <SVGText
-                                x={textData.pos.x}
-                                y={textData.fontSize + textData.pos.y}
+                                x={textData.pos[0]}
+                                y={textData.fontSize + textData.pos[1]}
                                 fontSize={textData.fontSize}
                                 key={i}
                                 fill={textData.color} >
@@ -71,5 +62,21 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
         <ScrollView style={{ marginTop: 20 }}>
             {msgs}
         </ScrollView>
+    )
+}
+function createPath(line: Line, index?: number) {
+    let { points, lineWidth, color } = line;
+    let d = `M ${points[0]} ${points[1]}`;
+    for (let i = 2; i < points.length; i += 2) {
+        d += ` L ${points[i]} ${points[i + 1]}`;
+    }
+    return (
+        <Path
+            key={index}
+            d={d}
+            strokeWidth={lineWidth}
+            strokeLinecap="round"
+            stroke={color}
+        />
     )
 }

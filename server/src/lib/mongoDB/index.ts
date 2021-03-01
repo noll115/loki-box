@@ -8,7 +8,8 @@ if (process.env.DB) {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         useCreateIndex: true,
-        dbName: "loki-box"
+        dbName: "loki-box",
+        useFindAndModify: false
     });
 
     mongoose.connection.on('connected', function () {

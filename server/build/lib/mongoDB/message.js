@@ -9,15 +9,69 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MessageClass = void 0;
+exports.MessageClass = exports.Message = exports.TextData = exports.Line = void 0;
 var typegoose_1 = require("@typegoose/typegoose");
 var user_1 = require("./user");
 var box_1 = require("./box");
+var Line = /** @class */ (function () {
+    function Line() {
+    }
+    __decorate([
+        typegoose_1.prop({ required: true }),
+        __metadata("design:type", String)
+    ], Line.prototype, "color", void 0);
+    __decorate([
+        typegoose_1.prop({ type: Number, required: true }),
+        __metadata("design:type", Array)
+    ], Line.prototype, "points", void 0);
+    __decorate([
+        typegoose_1.prop({ required: true }),
+        __metadata("design:type", Number)
+    ], Line.prototype, "lineWidth", void 0);
+    return Line;
+}());
+exports.Line = Line;
+var TextData = /** @class */ (function () {
+    function TextData() {
+    }
+    __decorate([
+        typegoose_1.prop({ required: true }),
+        __metadata("design:type", String)
+    ], TextData.prototype, "text", void 0);
+    __decorate([
+        typegoose_1.prop({ required: true }),
+        __metadata("design:type", Number)
+    ], TextData.prototype, "fontSize", void 0);
+    __decorate([
+        typegoose_1.prop({ type: Number, required: true }),
+        __metadata("design:type", Array)
+    ], TextData.prototype, "pos", void 0);
+    __decorate([
+        typegoose_1.prop({ required: true }),
+        __metadata("design:type", String)
+    ], TextData.prototype, "color", void 0);
+    return TextData;
+}());
+exports.TextData = TextData;
+var Message = /** @class */ (function () {
+    function Message() {
+    }
+    __decorate([
+        typegoose_1.prop({ type: Line, _id: false, required: true }),
+        __metadata("design:type", Array)
+    ], Message.prototype, "lines", void 0);
+    __decorate([
+        typegoose_1.prop({ type: TextData, _id: false, required: true }),
+        __metadata("design:type", Array)
+    ], Message.prototype, "texts", void 0);
+    return Message;
+}());
+exports.Message = Message;
 var MessageClass = /** @class */ (function () {
     function MessageClass() {
     }
     __decorate([
-        typegoose_1.prop({ required: true, default: Date.now() }),
+        typegoose_1.prop({ default: Date.now }),
         __metadata("design:type", Date)
     ], MessageClass.prototype, "sentTime", void 0);
     __decorate([
@@ -25,8 +79,8 @@ var MessageClass = /** @class */ (function () {
         __metadata("design:type", Boolean)
     ], MessageClass.prototype, "seen", void 0);
     __decorate([
-        typegoose_1.prop({ required: true }),
-        __metadata("design:type", Buffer)
+        typegoose_1.prop({ _id: false, required: true }),
+        __metadata("design:type", Message)
     ], MessageClass.prototype, "data", void 0);
     __decorate([
         typegoose_1.prop({ ref: function () { return box_1.BoxClass; }, required: true, index: true }),

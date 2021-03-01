@@ -1,6 +1,5 @@
 import { Strategy as jwtStrategy, ExtractJwt, StrategyOptions } from "passport-jwt";
 import { Strategy as localStrategy } from "passport-local";
-import { PassportStatic } from "passport";
 import { boxModel, userModel, Roles } from "./mongoDB";
 import { BoxSocket, JWTBoxData, JWTUserData, UserSocket } from "../types/general";
 import { Socket } from "socket.io";
@@ -15,7 +14,7 @@ const userOptions: StrategyOptions = {
 }
 
 const boxOptions: StrategyOptions = {
-    jwtFromRequest: ExtractJwt.fromUrlQueryParameter("jwt"),
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     secretOrKey: process.env.BOX_SECRET,
     ignoreExpiration: true,
     algorithms: ["HS256"]
@@ -80,9 +79,9 @@ function SocketVerifyUserJWT(socket: Socket, next: (err?: ExtendedError | undefi
 
 function SocketVerifyBoxJWT(socket: Socket, next: (err?: ExtendedError | undefined) => void) {
     let boxSocket = <BoxSocket>socket;
+    
     passport.authenticate('box-jwt', { session: false }, (err, box, info) => {
         if (!box || err) return boxSocket.emit('jwt failed')
-        console.log(box);
 
         boxSocket.box = box;
         next();

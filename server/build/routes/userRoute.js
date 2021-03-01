@@ -65,7 +65,7 @@ var jwt = __importStar(require("jsonwebtoken"));
 var adminRoute_1 = __importDefault(require("./adminRoute"));
 var passport_1 = require("../lib/passport");
 var message_1 = __importDefault(require("../lib/mongoDB/message"));
-exports.default = (function (passport, redis, namespaces) {
+exports.default = (function (passport, sockets, namespaces) {
     var router = express_1.Router();
     router.post("/register", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
         var _a, pass, email, user, userData, jwtToken, error_1;
@@ -110,132 +110,136 @@ exports.default = (function (passport, redis, namespaces) {
     namespaces.user.use(passport_1.SocketVerifyUserJWT);
     namespaces.user.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0, function () {
         return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, redis.addSocket(socket.user, socket.id)];
-                case 1:
-                    _a.sent();
-                    socket.emit('boxes', socket.user.boxes);
-                    socket.on("getBoxes", function (cb) { return __awaiter(void 0, void 0, void 0, function () {
-                        var boxes;
-                        return __generator(this, function (_a) {
-                            boxes = socket.user.boxes;
-                            console.log(boxes);
-                            cb(boxes);
-                            return [2 /*return*/];
-                        });
-                    }); });
-                    socket.on('disconnect', function () {
-                        console.log(socket.user.email + " disconnected");
-                    });
-                    socket.on("registerBox", function (newBoxInfo, cb) { return __awaiter(void 0, void 0, void 0, function () {
-                        var box, newBox, _a, error_2;
-                        return __generator(this, function (_b) {
-                            switch (_b.label) {
-                                case 0:
-                                    console.log(newBoxInfo);
-                                    _b.label = 1;
-                                case 1:
-                                    _b.trys.push([1, 6, , 7]);
-                                    return [4 /*yield*/, mongoDB_1.boxModel.findById(newBoxInfo.boxID)];
-                                case 2:
-                                    box = _b.sent();
-                                    if (!box) return [3 /*break*/, 4];
-                                    newBox = {
-                                        box: box.id,
-                                        boxName: newBoxInfo.boxName,
-                                        seenAs: newBoxInfo.seenAs
-                                    };
-                                    _a = socket;
-                                    return [4 /*yield*/, socket.user.addBox(newBox)];
-                                case 3:
-                                    _a.user = _b.sent();
-                                    console.log(socket.user.id);
-                                    socket.emit('boxes', socket.user.boxes);
-                                    cb({ status: "ok" });
-                                    return [3 /*break*/, 5];
-                                case 4:
-                                    cb({ status: "failed" });
-                                    _b.label = 5;
-                                case 5: return [3 /*break*/, 7];
-                                case 6:
-                                    error_2 = _b.sent();
-                                    console.log(error_2);
-                                    cb({ status: "failed" });
-                                    return [3 /*break*/, 7];
-                                case 7: return [2 /*return*/];
-                            }
-                        });
-                    }); });
-                    socket.on("sendMsg", function (boxID, msg, cb) { return __awaiter(void 0, void 0, void 0, function () {
-                        var box, boxSocket, newMsg, socketInstance;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    box = socket.user.getBox(boxID);
-                                    if (!box) return [3 /*break*/, 3];
-                                    return [4 /*yield*/, redis.getSocket('box', boxID)];
-                                case 1:
-                                    boxSocket = _a.sent();
-                                    if (!boxSocket) return [3 /*break*/, 3];
-                                    return [4 /*yield*/, message_1.default.create({
-                                            data: msg,
-                                            from: socket.user.id,
-                                            to: boxID
-                                        })];
-                                case 2:
-                                    newMsg = _a.sent();
-                                    socketInstance = namespaces.box.sockets.get(boxSocket);
-                                    if (socketInstance) {
-                                        socketInstance.emit('sendMsg', newMsg.data, newMsg.from, box.seenAs);
-                                        cb({ status: 'ok' });
-                                    }
-                                    _a.label = 3;
-                                case 3:
-                                    cb({ status: "failed" });
-                                    return [2 /*return*/];
-                            }
-                        });
-                    }); });
-                    socket.on("removeBox", function (boxID, cb) { return __awaiter(void 0, void 0, void 0, function () {
-                        var _a, err_1;
-                        return __generator(this, function (_b) {
-                            switch (_b.label) {
-                                case 0:
-                                    _b.trys.push([0, 2, , 3]);
-                                    _a = socket;
-                                    return [4 /*yield*/, socket.user.removeBox(boxID)];
-                                case 1:
-                                    _a.user = _b.sent();
-                                    cb({ status: "ok" });
-                                    return [3 /*break*/, 3];
-                                case 2:
-                                    err_1 = _b.sent();
-                                    cb({ status: "failed" });
-                                    return [3 /*break*/, 3];
-                                case 3: return [2 /*return*/];
-                            }
-                        });
-                    }); });
-                    socket.on('getMsgHistory', function (boxID, cb) { return __awaiter(void 0, void 0, void 0, function () {
-                        var box, msgs;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    box = socket.user.getBox(boxID);
-                                    if (!box) return [3 /*break*/, 2];
-                                    return [4 /*yield*/, message_1.default.find({ from: socket.user.id }).sort('-sentTime').lean()];
-                                case 1:
-                                    msgs = _a.sent();
-                                    cb({ status: 'ok', msgs: msgs });
-                                    _a.label = 2;
-                                case 2:
-                                    cb({ status: 'failed' });
-                                    return [2 /*return*/];
-                            }
-                        });
-                    }); });
+            sockets[socket.user.id] = socket.id;
+            socket.emit('boxes', socket.user.boxes);
+            socket.on("getBoxes", function (cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var boxes;
+                return __generator(this, function (_a) {
+                    boxes = socket.user.boxes;
+                    console.log(boxes);
+                    cb(boxes);
                     return [2 /*return*/];
-            }
+                });
+            }); });
+            socket.on('disconnect', function () {
+                console.log(socket.user.email + " disconnected");
+            });
+            socket.on("registerBox", function (newBoxInfo, cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var box, newBox, _a, error_2;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            console.log(newBoxInfo);
+                            _b.label = 1;
+                        case 1:
+                            _b.trys.push([1, 6, , 7]);
+                            return [4 /*yield*/, mongoDB_1.boxModel.findById(newBoxInfo.boxID)];
+                        case 2:
+                            box = _b.sent();
+                            if (!box) return [3 /*break*/, 4];
+                            newBox = {
+                                box: box.id,
+                                boxName: newBoxInfo.boxName,
+                                seenAs: newBoxInfo.seenAs
+                            };
+                            _a = socket;
+                            return [4 /*yield*/, socket.user.addBox(newBox)];
+                        case 3:
+                            _a.user = _b.sent();
+                            console.log(socket.user.id);
+                            socket.emit('boxes', socket.user.boxes);
+                            cb({ status: "ok" });
+                            return [3 /*break*/, 5];
+                        case 4:
+                            cb({ status: "failed" });
+                            _b.label = 5;
+                        case 5: return [3 /*break*/, 7];
+                        case 6:
+                            error_2 = _b.sent();
+                            console.log(error_2);
+                            cb({ status: "failed" });
+                            return [3 /*break*/, 7];
+                        case 7: return [2 /*return*/];
+                    }
+                });
+            }); });
+            socket.on("sendMsg", function (boxID, msg, cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var box, boxSocket, newMsg, socketInstance, error_3;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            box = socket.user.getBox(boxID);
+                            _a.label = 1;
+                        case 1:
+                            _a.trys.push([1, 4, , 5]);
+                            if (!box) return [3 /*break*/, 3];
+                            boxSocket = sockets[boxID] || null;
+                            return [4 /*yield*/, message_1.default.create({
+                                    data: msg,
+                                    from: socket.user.id,
+                                    to: boxID,
+                                })];
+                        case 2:
+                            newMsg = _a.sent();
+                            if (boxSocket) {
+                                socketInstance = namespaces.box.sockets.get(boxSocket);
+                                if (socketInstance) {
+                                    socketInstance.emit('sendMsg', newMsg.data, newMsg.from, box.seenAs);
+                                }
+                            }
+                            cb({ status: 'ok' });
+                            _a.label = 3;
+                        case 3:
+                            cb({ status: "failed" });
+                            return [3 /*break*/, 5];
+                        case 4:
+                            error_3 = _a.sent();
+                            console.log(error_3);
+                            cb({ status: "failed" });
+                            return [3 /*break*/, 5];
+                        case 5: return [2 /*return*/];
+                    }
+                });
+            }); });
+            socket.on("removeBox", function (boxID, cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var _a, err_1;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            _b.trys.push([0, 2, , 3]);
+                            _a = socket;
+                            return [4 /*yield*/, socket.user.removeBox(boxID)];
+                        case 1:
+                            _a.user = _b.sent();
+                            cb({ status: "ok" });
+                            return [3 /*break*/, 3];
+                        case 2:
+                            err_1 = _b.sent();
+                            cb({ status: "failed" });
+                            return [3 /*break*/, 3];
+                        case 3: return [2 /*return*/];
+                    }
+                });
+            }); });
+            socket.on('getMsgHistory', function (boxID, cb) { return __awaiter(void 0, void 0, void 0, function () {
+                var box, msgs;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            box = socket.user.getBox(boxID);
+                            if (!box) return [3 /*break*/, 2];
+                            return [4 /*yield*/, message_1.default.find({ from: socket.user.id }).select('-__v -from').sort('-sentTime').lean()];
+                        case 1:
+                            msgs = _a.sent();
+                            cb({ status: 'ok', msgs: msgs });
+                            _a.label = 2;
+                        case 2:
+                            cb({ status: 'failed' });
+                            return [2 /*return*/];
+                    }
+                });
+            }); });
+            return [2 /*return*/];
         });
     }); });
     router.use("/admin", adminRoute_1.default(passport));
