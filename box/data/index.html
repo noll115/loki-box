@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LokiBox</title>
+</head>
+<script>
+    setTimeout(function () {
+        var viewport = document.querySelector("meta[name=viewport]");
+        viewport.setAttribute("content", viewport.content + ", height=" + window.innerHeight);
+    }, 300);
+    let form;
+    let loader;
+    async function fetchNearbyWiFi() {
+        let ssids = await (await fetch("/data")).json();
+        let select = document.querySelector('#ssid');
+        // let ssids = ['haa', 'asdasdasd', 'asdasdasd'];
+        for (const ssid of ssids) {
+            let option = document.createElement('option');
+            option.text = ssid;
+            select.appendChild(option);
+        }
+
+        loader.classList.add('hidden');
+        form.classList = [];
+    }
+
+    async function OnDOMLoaded() {
+        form = document.querySelector('#form');
+        loader = document.querySelector('#loader');
+        await fetchNearbyWiFi();
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            let inputs = form.elements;
+            let selectssid = inputs['ssid'];
+            let ssid = selectssid.value;
+            let password = inputs['password'].value;
+            if(selectssid[selectssid.selectedIndex].hasAttribute('disable')){
+                return;
+            }
+            let res = await fetch('/form', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    ssid,
+                    password
+                })
+            });
+            let status = await res.text();
+            console.log(status);
+            if (status === 'ok') {
+                document.querySelector('#response').classList = ['body'];
+                document.querySelector('#initBody').classList = ['hidden']
+            }
+        })
+    }
+
+    document.addEventListener('DOMContentLoaded', OnDOMLoaded);
+</script>
+
+<body>
+    <div class="content">
+        <div class="title">
+            <span>Box box</span>
+        </div>
+        <div id="initBody" class="body">
+            <div class="form-title">Connect to your network!</div>
+            <div class="loader" id="loader">
+                <span>Fetching nearby networks </span>
+                <span class="icon"></span>
+            </div>
+
+            <form id="form" class="hidden">
+                <a href="/index.html">Dont see your Wifi? Press to refresh</a>
+                <Label for="ssid">Select your network's name</Label>
+                <select name="ssid" id="ssid">
+                    <option selected disable hidden>Wifi's name</option>
+                </select>
+                <Label for="password">Wifi's Password</Label>
+                <input type="text" autocapitalize="none" maxlength="63" name="password" />
+                <button type="submit">Connect</button>
+            </form>
+
+        </div>
+        <div id="response" class="body hidden">
+            Your box is now connecting to the server. Check out the screen to make sure the connection is successful.
+        </div>
+    </div>
+
+</body>
+
+</html>
