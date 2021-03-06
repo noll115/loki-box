@@ -17,7 +17,7 @@ export class TextData {
     @prop({ required: true })
     public text!: string
     @prop({ required: true })
-    public fontSize!: number
+    public txtMult!: number
     @prop({ type: Number, required: true })
     public pos!: number[]
     @prop({ required: true })
@@ -48,6 +48,9 @@ export class MessageClass {
 
     @prop({ ref: () => UserClass, required: true, index: true })
     public from: Ref<UserClass>
+
+    @prop({ required: true })
+    public fromSeenAs!: string
 
 }
 

@@ -29,10 +29,10 @@ interface MsgProps {
     canvasHeight: number,
     index: number,
     sketchDispatch: React.Dispatch<ReducerActions>,
-
+    enabled: boolean
 }
-
-const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, sketchDispatch }) => {
+ const BASE_TEXT_WIDTH = 16;
+const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, sketchDispatch, enabled }) => {
 
 
     let textRef = useRef<any | null>(null);
@@ -62,6 +62,8 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     }
 
     let updatePos = ([x, y]: readonly number[]) => {
+        console.log(x,y);
+        
         sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current, pos: [x, y] } })
     }
 
@@ -150,7 +152,6 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                     textHeight.setValue(height);
                     textWidth.setValue(width);
                 }}
-
                 value={textData.text}
                 textAlign='center'
                 editable={editable}
@@ -161,7 +162,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                 onChangeText={changeText}
                 style={[style.text, {
                     color: textData.color,
-                    fontSize: textData.fontSize,
+                    fontSize: BASE_TEXT_WIDTH * textData.txtMult,
                     maxWidth: canvasWidth - 10,
                     maxHeight: canvasHeight - 10
                 }]} />
@@ -169,6 +170,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                 onHandlerStateChange={onGesturePan}
                 onGestureEvent={onGesturePan}
                 maxPointers={1}
+                enabled={enabled}
             >
                 <Animated.View style={{ ...StyleSheet.absoluteFillObject }} />
             </PanGestureHandler >
@@ -180,7 +182,6 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
 
 let style = StyleSheet.create({
     text: {
-        textAlignVertical: 'top',
         textAlign: 'left',
     }
 })

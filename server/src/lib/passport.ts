@@ -67,9 +67,10 @@ passport.use("login", new localStrategy({
 
 function SocketVerifyUserJWT(socket: Socket, next: (err?: ExtendedError | undefined) => void) {
     let userSocket = <UserSocket>socket;
+    console.log('user');
+    
     passport.authenticate('user-jwt', { session: false }, (err, user, info) => {
-        if (!user || err) return userSocket.emit('jwt failed');
-        console.log(user);
+        if (!user || err) return userSocket.emit('jwt_failed');
 
         userSocket.user = user;
         next();
@@ -81,7 +82,7 @@ function SocketVerifyBoxJWT(socket: Socket, next: (err?: ExtendedError | undefin
     let boxSocket = <BoxSocket>socket;
     
     passport.authenticate('box-jwt', { session: false }, (err, box, info) => {
-        if (!box || err) return boxSocket.emit('jwt failed')
+        if (!box || err) return boxSocket.emit('jwt_failed')
 
         boxSocket.box = box;
         next();

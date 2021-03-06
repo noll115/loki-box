@@ -14,6 +14,7 @@ import { IBox, IMessageData } from "../../../types/general";
 let INIT_STATE: SketchState = {
     color: '#FFFFFF',
     lineWidth: 12,
+    textSizeMultiplier: 1,
     currentTool: CanvasTools.DRAW,
     canvasState: CanvasState.EDITING,
     scale: 1,
@@ -26,13 +27,14 @@ let INIT_STATE: SketchState = {
 
 
 
-
 let canvasReducer = (prevState: SketchState, action: ReducerActions): SketchState => {
     switch (action.type) {
         case CanvasActions.SET_COLOR:
             return { ...prevState, color: action.color }
         case CanvasActions.SET_LINEWIDTH:
             return { ...prevState, lineWidth: action.lineWidth };
+        case CanvasActions.SET_TEXT_MULTIPLIER:
+            return { ...prevState, textSizeMultiplier: action.textMult }
         case CanvasActions.SET_STATE:
             return { ...prevState, canvasState: action.state };
         case CanvasActions.SET_TOOL:
@@ -183,7 +185,6 @@ interface Props {
     box: IBox
 }
 
-
 export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onSubmit, socket, box }) => {
     let [state, dispatch] = useReducer(canvasReducer, INIT_STATE);
     const window = useWindowDimensions()
@@ -228,7 +229,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 
         let newText: TextData = {
             text: '',
-            fontSize: state.lineWidth,
+            txtMult: state.textSizeMultiplier,
             pos: [x, y],
             color: state.color
         };
@@ -291,10 +292,10 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 
 
     let paths = useMemo(() => {
-        return state.lines.map((line, i) => createPath(line,i))
+        return state.lines.map((line, i) => createPath(line, i))
     }, [state.lines])
 
-    let canvasBtns = useMemo(() => <Canvasbtns sketchState={state} sketchDispatch={dispatch} />, [state.currentTool, state.lineWidth, state.empty])
+    let canvasBtns = useMemo(() => <Canvasbtns sketchState={state} sketchDispatch={dispatch} />, [state.currentTool, state.empty])
     let switchViews = () => {
         onSubmit();
     }
@@ -322,27 +323,22 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
                         >
                             {paths}
                             {state.currentLine && createPath(state.currentLine)}
-                            {submitting && state.texts.map((textData, i) =>
-                                <SVGText
-                                    x={textData.pos[0]}
-                                    y={textData.fontSize + textData.pos[1]}
-                                    fontSize={textData.fontSize}
-                                    key={i} fill={textData.color} >{textData.text}
-                                </SVGText>)
-                            }
                         </Svg>
                     </Animated.View>
                 </PanGestureHandler>
-                {!submitting && state.texts.map((textData, i) =>
+                {state.texts.map((textData, i) =>
                     <CanvasTextInput key={i}
                         textData={textData}
                         canvasWidth={width}
                         index={i}
                         sketchDispatch={dispatch}
-                        canvasHeight={height} />)
+                        canvasHeight={height}
+                        enabled={!submitting && state.currentTool === CanvasTools.TEXT}
+                    />
+                )
                 }
             </Animated.View >
-            {canvasBtns}
+            { canvasBtns}
             {
                 state.canvasState === CanvasState.SUBMITTING &&
                 <Animated.View style={[style.loadingScreen, { opacity: opacityAnim }]}>
@@ -378,7 +374,7 @@ const style = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(0,0,0,0.3)'
-    }
+    },
 })
 
 function createPath(line: Line, index?: number) {

@@ -7,6 +7,13 @@ import { PassportStatic } from "passport";
 import messageModel from "../lib/mongoDB/message";
 
 
+async function getNewMsg(id: string) {
+    let resp = await messageModel.find({ to: id, seen: false }, '-seen -to -sentTime -__v').sort('-sentTime').limit(1).lean();
+    let msg = resp[0] || null;
+    console.log(msg);
+    return msg;
+}
+
 export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: NameSpaces) => {
     let router = Router();
     router.post("/auth", async (req, res, next) => {
@@ -29,19 +36,21 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
 
     namespaces.box.on('connection', async (socket: BoxSocket) => {
         sockets[socket.box.id] = socket.id;
-        let msg = await messageModel.find({ to: socket.box.id, seen: false }).populate('from').sort('-sentTime').select('-seen -to -sentTime -__v').limit(1).lean();
-        socket.emit('getNewMsg', msg[0]);
         socket.on('seenMsg', async (msgID: string) => {
             messageModel.findByIdAndUpdate(msgID, { seen: true }).exec();
         });
-        socket.on('getNewMsg', async (cb) => {
-            console.log("GET NEW MSG");
-            let msg = await messageModel.find({ to: socket.box.id, seen: false }).sort('-sentTime').select('-seen -to -sentTime -__v').limit(1).lean();
-            cb(msg[0]);
-        });
         socket.on('getMsg', async (id, cb) => {
             console.log('getMsg');
-            let msg = await messageModel.findById(id).select('-seen -to -sentTime -__v').lean();
+            let msg = await messageModel.findById(id, '-from -_id -seen -to -sentTime -__v').lean();
+            console.log(msg);
+
+            cb(msg);
+        });
+        socket.on('checkForMsg', async (cb) => {
+            let resp = await messageModel.find({ to: socket.box.id, seen: false }, '_id').sort('-sentTime').limit(1).lean();
+            let msg = resp[0] || null;
+            console.log(msg);
+
             cb(msg);
         })
     });

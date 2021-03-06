@@ -99,17 +99,17 @@ exports.default = (function (passport, sockets, namespaces) {
             switch (_a.label) {
                 case 0:
                     sockets[socket.box.id] = socket.id;
-                    return [4 /*yield*/, message_1.default.find({ to: socket.box.id, seen: false }).sort('-sentTime').select('-seen -to -sentTime -__v').limit(1).lean()];
+                    return [4 /*yield*/, message_1.default.find({ to: socket.box.id, seen: false }).populate('from').sort('-sentTime').select('-seen -to -sentTime -__v').limit(1).lean()];
                 case 1:
                     msg = _a.sent();
-                    socket.emit('getMsg', msg[0]);
+                    socket.emit('getNewMsg', msg[0]);
                     socket.on('seenMsg', function (msgID) { return __awaiter(void 0, void 0, void 0, function () {
                         return __generator(this, function (_a) {
                             message_1.default.findByIdAndUpdate(msgID, { seen: true }).exec();
                             return [2 /*return*/];
                         });
                     }); });
-                    socket.on('getMsg', function (cb) { return __awaiter(void 0, void 0, void 0, function () {
+                    socket.on('getNewMsg', function (cb) { return __awaiter(void 0, void 0, void 0, function () {
                         var msg;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
@@ -119,6 +119,20 @@ exports.default = (function (passport, sockets, namespaces) {
                                 case 1:
                                     msg = _a.sent();
                                     cb(msg[0]);
+                                    return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    socket.on('getMsg', function (id, cb) { return __awaiter(void 0, void 0, void 0, function () {
+                        var msg;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    console.log('getMsg');
+                                    return [4 /*yield*/, message_1.default.findById(id).select('-seen -to -sentTime -__v').lean()];
+                                case 1:
+                                    msg = _a.sent();
+                                    cb(msg);
                                     return [2 /*return*/];
                             }
                         });

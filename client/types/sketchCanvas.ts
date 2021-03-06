@@ -18,7 +18,7 @@ export interface Line {
 
 export interface TextData {
     text: string,
-    fontSize: number,
+    txtMult: number,
     pos: [number, number],
     color: string,
 }
@@ -27,6 +27,7 @@ export interface TextData {
 export enum CanvasActions {
     SET_COLOR,
     SET_LINEWIDTH,
+    SET_TEXT_MULTIPLIER,
     SET_TOOL,
     SET_STATE,
     SET_SCALE,
@@ -41,6 +42,7 @@ export enum CanvasActions {
 export interface SketchState {
     color: string,
     lineWidth: number,
+    textSizeMultiplier: number,
     currentTool: CanvasTools,
     canvasState: CanvasState,
     scale: number,
@@ -55,6 +57,9 @@ export type ReducerActions = {
 } | {
     type: CanvasActions.SET_LINEWIDTH,
     lineWidth: number
+} | {
+    type: CanvasActions.SET_TEXT_MULTIPLIER,
+    textMult: number
 } | {
     type: CanvasActions.SET_TOOL,
     tool: CanvasTools

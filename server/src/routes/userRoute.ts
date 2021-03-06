@@ -43,7 +43,6 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
 
         return res.send({ jwtToken });
     });
-
     namespaces.user.use(SocketVerifyUserJWT);
 
 
@@ -98,6 +97,7 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
                         data: msg,
                         from: socket.user.id,
                         to: boxID,
+                        fromSeenAs: box.seenAs
                     });
                     if (boxSocket) {
                         let socketInstance = namespaces.box.sockets.get(boxSocket);

@@ -10,6 +10,8 @@ import Animated, {
     min,
     set,
     sub,
+    round,
+    interpolate,
     useValue,
 } from 'react-native-reanimated';
 import { LinearGradient } from "expo-linear-gradient";
@@ -98,19 +100,42 @@ const ColorSlider: React.FC<{ setColor(col: string): void }> = ({ setColor }) =>
     )
 }
 
-const StrokeSlider: React.FC<{ setLineWidth(width: number): void, lineWidth: number }> = ({ setLineWidth, lineWidth }) => {
+const Slider: React.FC<{ onValueChange(newVal: number): void, range: [number, number], startVal: number }> = ({ onValueChange, range, startVal }) => {
 
     let width = useValue<number>(100);
     let selectingState = useValue<number>(0);
     let transX = useValue<number>(0);
-    let [strokeWidth, setStrokeWidth] = useState(lineWidth);
-    let changeCanvasWith = ([x]: readonly number[]) => {
-        setLineWidth(Math.ceil(12 + (x * 12)));
+    let [currentValue, setCurrentValue] = useState(startVal);
+    console.log('ya');
+
+    useEffect(() => {
+        onValueChange(startVal);
+    }, [])
+
+
+    let inputRange: number[] = [];
+    let outputRange: number[] = [];
+    let rangeLength = range[1] - range[0];
+    let inputPerc = 1 / rangeLength;
+    for (let i = 0; i <= rangeLength; i++) {
+        inputRange.push(inputPerc * i);
+        outputRange.push(range[0] + i);
+    }
+
+    let finalizeVal = ([x]: readonly number[]) => {
+        onValueChange(x);
     }
 
     let updateTextVal = ([x]: readonly number[]) => {
-        setStrokeWidth(Math.ceil(12 + (x * 12)));
+        console.log(x);
+
+        setCurrentValue(x);
     }
+
+    let interpolateRange = (input: Animated.Node<number>) => round(interpolate(input, {
+        inputRange,
+        outputRange
+    }));
 
 
     let panHandler = Animated.event([
@@ -125,10 +150,14 @@ const StrokeSlider: React.FC<{ setLineWidth(width: number): void, lineWidth: num
                     eq(state, State.END),
                     [
                         set(selectingState, 0),
-                        call([divide(transX, width)], changeCanvasWith)
+                        call([interpolateRange(divide(transX, width))], finalizeVal)
                     ],
                 ),
-                call([divide(transX, width)], updateTextVal)
+                cond(
+                    eq(state, State.ACTIVE), [
+                    call([interpolateRange(divide(transX, width))], updateTextVal)
+                ]
+                )
             ])
         },
     ]);
@@ -151,7 +180,7 @@ const StrokeSlider: React.FC<{ setLineWidth(width: number): void, lineWidth: num
                     }],
                 }]} >
                     <Animated.View style={[canvasBtnStyle.selectorInner, canvasBtnStyle.selectorInnerSize]} >
-                        <Text>{strokeWidth}</Text>
+                        <Text>{currentValue}</Text>
                     </Animated.View>
                 </Animated.View>
 
@@ -165,16 +194,20 @@ const StrokeSlider: React.FC<{ setLineWidth(width: number): void, lineWidth: num
 
 
 function DrawingBtns(sketchState: SketchState, sketchDispatch: React.Dispatch<ReducerActions>) {
-    let { currentTool, lineWidth } = sketchState
+    let { currentTool } = sketchState
 
     let txtAddition = currentTool === CanvasTools.TEXT ? 'Text' : 'Stroke';
-
+    let textRange: [number, number] = [1, 7];
+    let lineRange: [number, number] = [10, 24];
     let setColor = (color: string) => {
         sketchDispatch({ type: CanvasActions.SET_COLOR, color })
     }
 
     let setLineWidth = (lineWidth: number) => {
         sketchDispatch({ type: CanvasActions.SET_LINEWIDTH, lineWidth })
+    }
+    let setTextWidth = (textMult: number) => {
+        sketchDispatch({ type: CanvasActions.SET_TEXT_MULTIPLIER, textMult });
     }
 
     let switchTools = () => {
@@ -193,7 +226,11 @@ function DrawingBtns(sketchState: SketchState, sketchDispatch: React.Dispatch<Re
                 <Text style={canvasBtnStyle.sliderText}>{txtAddition} Color:</Text>
                 <ColorSlider setColor={setColor} />
                 <Text style={canvasBtnStyle.sliderText}>{txtAddition} Size:</Text>
-                <StrokeSlider setLineWidth={setLineWidth} lineWidth={lineWidth} />
+                {
+                    currentTool === CanvasTools.TEXT ?
+                        <Slider key={'text'} onValueChange={setTextWidth} range={textRange} startVal={textRange[0]} /> :
+                        <Slider key={'line'} onValueChange={setLineWidth} range={lineRange} startVal={lineRange[0]} />
+                }
             </View>
             <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
                 <TouchableOpacity style={[canvasBtnStyle.modeBtn, sketchState.empty && canvasBtnStyle.modeBtnDisabled]}

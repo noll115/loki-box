@@ -4,6 +4,7 @@ import { IBox, IMessage } from '../types/general';
 import { ScrollView } from 'react-native-gesture-handler';
 import Svg, { Path, Text as SVGText } from 'react-native-svg';
 import { Line } from '../types/sketchCanvas';
+import CanvasTextInput from './Views/messageView/CanvasTextInput';
 
 
 interface Props {
@@ -26,6 +27,7 @@ const Months = [
     'December'
 ]
 
+const BASE_TEXT_WIDTH = 16;
 
 
 export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
@@ -38,17 +40,26 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
             <View style={{ width: 320, height: 240 }}>
                 <Svg style={{ backgroundColor: 'black', width: 320, height: 240 }}>
                     {lines.map((line, i) => createPath(line, i))}
-                    {
-                        texts.map((textData, i) => (
-                            <SVGText
-                                x={textData.pos[0]}
-                                y={textData.fontSize + textData.pos[1]}
-                                fontSize={textData.fontSize}
-                                key={i}
-                                fill={textData.color} >
-                                {textData.text}
-                            </SVGText>
-                        ))
+
+                    {texts.map((textData, i) =>
+                        <Text
+                            key={i}
+
+                            style={[style.text,
+                            {
+                                color: textData.color,
+                                fontSize: BASE_TEXT_WIDTH * textData.txtMult,
+                                transform: [{
+                                    translateX: textData.pos[0],
+                                }, {
+                                    translateY: textData.pos[1]
+                                }]
+                            }
+                            ]}
+                        >
+                            {textData.text}
+                        </Text>
+                    )
                     }
                 </Svg>
                 <View style={{ flexDirection: 'row', paddingHorizontal: 10 }}>
@@ -80,3 +91,8 @@ function createPath(line: Line, index?: number) {
         />
     )
 }
+let style = StyleSheet.create({
+    text: {
+        textAlign: 'left',
+    }
+})

@@ -156,6 +156,9 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
             }
         })
         socket.on('connect_error', (err: Error) => {
+            console.log("Socket Error");
+            console.log(err);
+            
             dispatch({
                 type: SocketActionTypes.SOCKET_DISCONNECTED,
                 payload: {
@@ -163,7 +166,9 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
                 }
             })
         });
-        socket.on('jwt failed', () => {
+        socket.on('jwt_failed', () => {
+            console.log("JWT failed");
+            
             dispatch(Logout());
         })
         socket.on('disconnect', () => {
