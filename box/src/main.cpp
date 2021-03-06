@@ -34,6 +34,7 @@ void setup() {
   tft.init();
   tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
+  tft.setTextFont(4);
 
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   WiFi.mode(WIFI_STA);
@@ -162,18 +163,19 @@ boolean ConnectToAP(const char *ssid, const char *password,
   String connectText("Connecting to:");
 
   long lastReport = millis();
-  tft.setTextSize(4);
+  const uint dotFontSize = 2;
+  tft.setTextSize(dotFontSize);
   uint16 textSize = tft.textWidth("...");
   while (WiFi.status() != WL_CONNECTED) {
     if (millis() - lastReport > 500) {
-      tft.fillRect(160 - ((float)textSize / 2), 120, textSize, 28, TFT_BLACK);
+      tft.fillRect(160 - ((float)textSize / 2), 120, textSize, 52, TFT_BLACK);
       numOfDots++;
       lastReport = millis();
     }
 
     if (numOfDots > 3) {
       numOfDots = 1;
-      tft.fillRect(160 - ((float)textSize / 2), 120, textSize, 28, TFT_BLACK);
+      tft.fillRect(160 - ((float)textSize / 2), 120, textSize, 52, TFT_BLACK);
     }
     size_t i = 0;
     for (; i < numOfDots; i++) {
@@ -183,9 +185,9 @@ boolean ConnectToAP(const char *ssid, const char *password,
       dots[i] = 0;
     }
     tft.setTextDatum(TL_DATUM);
-    tft.setTextSize(4);
+    tft.setTextSize(dotFontSize);
     tft.drawString(dots, 160 - ((float)textSize / 2), 120);
-    tft.setTextSize(2);
+    tft.setTextSize(1);
     tft.setTextDatum(MC_DATUM);
     tft.drawString(connectText, 160, 80);
     tft.drawString(ssid, 160, 110);

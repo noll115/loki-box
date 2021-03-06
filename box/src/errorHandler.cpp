@@ -13,14 +13,14 @@ class ErrorHandler {
   static void printError(Errors error, TFT_eSPI &tft) {
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
-    tft.setTextSize(2);
+    tft.setTextSize(1);
     switch (error) {
       case Errors::GENERAL:
         tft.drawString("Something went wrong. Restarting.", 160, 100);
         break;
       case Errors::FAILED_TO_SERVER:
         tft.drawString("Failed to contact servers", 160, 100);
-        tft.drawString("Retrying...", 160, 120);
+        tft.drawString("Retrying...", 160, 140);
         break;
       case Errors::FAILED_TO_NETWORK:
         tft.drawString("Connection to WiFi failed", 160, 100);

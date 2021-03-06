@@ -5,15 +5,17 @@
 #include <ESP8266HTTPClient.h>
 #include <qrcode.h>
 
-#define PHOTOPIN A0
+#define PHOTOPIN 
 
 const char *const SEEN_MSG = "seenMsg";
-const char *const GET_NEW_MSG = "getNewMsg";
+const char *const CHECK_FOR_MSG = "checkForMsg";
 const char *const GET_MSG = "getMsg";
-const char *const URL = "192.168.1.3";
+const char *const URL = "192.168.1.2";
 const char *const TOKEN = "cutie";
 const char *const ID = "6010b0545bf32741e1a33c85";
 
+enum ACK_TYPE : byte { NEW_MSG_ACK = 0, REDRAW_MSG_ACK, CHECK_MSG_ACK };
+enum GET_MSG_TYPE : byte { NEW_MSG = 0, REDRAW_MSG };
 class BoxSocket {
  private:
   TFT_eSPI &tft;
@@ -25,42 +27,36 @@ class BoxSocket {
   boolean shownQRCode = false;
   boolean fadeHeart = false;
   boolean boxClosed = false;
+  boolean gettingMsg = false;
   float fade = (250.0F / 500.0F);
   float fadeAmount = 0;
 
+  boolean hasMsg() { return currentMsgID[0]; }
+
   void noMsgDisplay() {
+    userReadMsg = true;
     tft.setTextDatum(MC_DATUM);
     tft.fillScreen(TFT_BLACK);
+    tft.setTextSize(1);
     tft.drawString("No messages.", 160, 100);
     tft.drawString("Please close the box.", 160, 140);
   }
 
   void drawMsg(JsonObject &msg) {
-    if (!userReadMsg && hasMsg()) {
-      return;
-    }
     tft.fillScreen(TFT_BLACK);
-    if (msg.isNull()) {
-      currentMsgID[0] = 0;
-      userReadMsg = true;
-      return noMsgDisplay();
-    }
-    userReadMsg = false;
-    strcpy(currentMsgID, msg["_id"].as<char *>());
-    auto lines = msg["data"]["lines"];
+    auto lines = msg["data"]["lines"].as<JsonArray>();
     size_t numOfLines = lines.size();
     for (size_t i = 0; i < numOfLines; i++) {
       auto line = lines[i];
-      auto color = line["color"].as<char *>();
-      int number = (int)strtoll(color + 1, NULL, 16);
       auto points = line["points"];
       auto pointSize = points.size();
-      auto strokeSize = (line["lineWidth"].as<float>() / 2);
+      auto strokeSize = line["lineWidth"].as<float>() / 2;
+      auto color = line["color"].as<char *>();
+      int number = (int)strtoll(color + 1, NULL, 16);
       int r = number >> 16;
       int g = number >> 8 & 0xFF;
       int b = number & 0xFF;
-      unsigned int rgb =
-          ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3);
+      uint rgb = ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3);
       for (size_t i = 0; i < pointSize; i += 2) {
         auto x1 = points[i].as<uint>();
         auto y1 = points[i + 1].as<uint>();
@@ -80,6 +76,50 @@ class BoxSocket {
         }
       }
     }
+    auto texts = msg["data"]["texts"].as<JsonArray>();
+    serializeJson(texts, Serial);
+    size_t numOfTexts = texts.size();
+    Serial.println(numOfTexts);
+    tft.setTextFont(2);
+    tft.setTextDatum(TL_DATUM);
+    for (size_t i = 0; i < numOfTexts; i++) {
+      auto text = texts[i];
+      auto msg = text["text"].as<char *>();
+      auto pos = text["pos"];
+      uint xPos = pos[0].as<uint>();
+      uint yPos = pos[1].as<uint>();
+      Serial.print(xPos);
+      Serial.print(yPos);
+      Serial.println();
+      uint textSize = text["txtMult"].as<uint>();
+      auto color = text["color"].as<char *>();
+      int number = (int)strtoll(color + 1, NULL, 16);
+      int r = number >> 16;
+      int g = number >> 8 & 0xFF;
+      int b = number & 0xFF;
+      uint rgb = ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3);
+      tft.setTextSize(textSize);
+      Serial.println(rgb);
+      tft.setTextColor(rgb, TFT_BLACK);
+      tft.drawString(msg, xPos, yPos);
+    }
+    tft.setTextFont(4);
+    tft.setTextSize(1);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  }
+
+  void firstDisplayMessage(JsonObject &msg) {
+    checkedForMsg = false;
+    userReadMsg = true;
+    readMsg();
+    tft.setTextDatum(MC_DATUM);
+    tft.fillScreen(TFT_BLACK);
+    auto fromNickName = msg["fromSeenAs"].as<char *>();
+    tft.drawString("Message from:", 160, 100);
+    tft.drawString(fromNickName, 160, 140);
+    delay(2000);
+    drawMsg(msg);
   }
 
   void parseEvent(char *payload, size_t length) {
@@ -93,11 +133,11 @@ class BoxSocket {
     if (err) {
       Serial.println(err.c_str());
     } else {
+      DynamicJsonDocument doc(10192);
       JsonArray arr = doc.as<JsonArray>();
       auto type = arr[0].as<char *>();
-      if (!strcmp(type, GET_NEW_MSG)) {
-        auto msg = arr[1].as<JsonObject>();
-        drawMsg(msg);
+      if (!strcmp(type, GET_MSG)) {
+        // auto msg = arr[1].as<JsonObject>();
       }
     }
   }
@@ -110,17 +150,22 @@ class BoxSocket {
       }
       payload[i] = ' ';
     }
-
     DynamicJsonDocument doc(10192);
-    DeserializationError err = deserializeJson(doc, payload);
-
-    if (err) {
-      Serial.println(err.c_str());
-    } else {
-      auto data = doc.as<JsonArray>();
-      if (ackId == 0) {
-        auto msg = data[0].as<JsonObject>();
-        drawMsg(msg);
+    Serial.println("GOT MSG");
+    deserializeJson(doc, payload);
+    auto data = doc.as<JsonArray>();
+    auto msg = data[0].as<JsonObject>();
+    if (ackId == ACK_TYPE::NEW_MSG_ACK) {
+      gettingMsg = false;
+      firstDisplayMessage(msg);
+    } else if (ackId == ACK_TYPE::REDRAW_MSG_ACK) {
+      gettingMsg = false;
+      drawMsg(msg);
+    } else if (ackId == ACK_TYPE::CHECK_MSG_ACK) {
+      if (!msg.isNull()) {
+        serializeJson(msg, Serial);
+        Serial.println();
+        strncpy(currentMsgID, msg["_id"].as<char *>(), 25);
       }
     }
   }
@@ -159,18 +204,18 @@ class BoxSocket {
     Serial.println("Getting auth");
     WiFiClient client;
     HTTPClient http;
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<256> authDoc;
     String json;
-    doc["token"] = TOKEN;
-    doc["boxID"] = ID;
-    serializeJson(doc, json);
-    doc.clear();
+    authDoc["token"] = TOKEN;
+    authDoc["boxID"] = ID;
+    serializeJson(authDoc, json);
+    authDoc.clear();
     if (http.begin(client, String("http://") + URL + ":3000/box/auth")) {
       http.addHeader("Content-type", "application/json");
       int httpCode = http.POST(json);
       if (httpCode > 0 && httpCode == HTTP_CODE_OK) {
-        deserializeJson(doc, http.getStream());
-        token = doc["token"].as<char *>();
+        deserializeJson(authDoc, http.getStream());
+        token = authDoc["token"].as<char *>();
         http.end();
         return true;
       }
@@ -184,35 +229,44 @@ class BoxSocket {
     };
   }
 
-  boolean hasMsg() { return currentMsgID[0]; }
+  void checkForMsg() {
 
- public:
-  boolean isConnected() { return socket->isConnected(); }
-
-  void getNewMsg() {
-    if (userReadMsg && !checkedForMsg) {
+    if (!checkedForMsg && userReadMsg) {
+      tft.fillScreen(TFT_BLACK);
+      userReadMsg = false;
       checkedForMsg = true;
-      StaticJsonDocument<128> doc;
-      JsonArray arr = doc.to<JsonArray>();
-      arr.add(GET_NEW_MSG);
-      String output("/box,0");
-      serializeJson(doc, output);
+      StaticJsonDocument<128> getMsg;
+      JsonArray arr = getMsg.to<JsonArray>();
+      arr.add(CHECK_FOR_MSG);
+      String output("/box,");
+      output += ACK_TYPE::CHECK_MSG_ACK;
+      serializeJson(arr, output);
       socket->sendEVENT(output);
       Serial.println(output);
     }
   }
 
-  void getMsg() {
-    if (hasMsg()) {
-      StaticJsonDocument<128> doc;
-      JsonArray arr = doc.to<JsonArray>();
+ public:
+  boolean isConnected() { return socket->isConnected(); }
+
+  void getMsg(GET_MSG_TYPE getType) {
+    Serial.println("GETTING MSG");
+    if (hasMsg() && !gettingMsg) {
+      gettingMsg = true;
+      StaticJsonDocument<128> getMsg;
+      JsonArray arr = getMsg.to<JsonArray>();
+      String output("/box,");
       arr.add(GET_MSG);
       arr.add(currentMsgID);
-      String output("/box,0");
+      output += getType == GET_MSG_TYPE::NEW_MSG ? ACK_TYPE::NEW_MSG_ACK
+                                                 : ACK_TYPE ::REDRAW_MSG_ACK;
       serializeJson(arr, output);
       socket->sendEVENT(output);
+      Serial.println(output);
+    } else if (!hasMsg()) {
+      checkedForMsg = false;
+      noMsgDisplay();
     }
-    return noMsgDisplay();
   }
 
   void showQRCode() {
@@ -237,9 +291,7 @@ class BoxSocket {
   }
 
   void readMsg() {
-    checkedForMsg = false;
-    if (!userReadMsg && hasMsg()) {
-      userReadMsg = true;
+    if (hasMsg()) {
       StaticJsonDocument<128> doc;
       JsonArray arr = doc.to<JsonArray>();
       arr.add(SEEN_MSG);
@@ -254,7 +306,7 @@ class BoxSocket {
   boolean init() {
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
-    tft.setTextSize(2);
+    tft.setTextSize(1);
 
     tft.drawString("Contacting server", 160, 100);
     if (!getAuth()) {
@@ -269,7 +321,8 @@ class BoxSocket {
 
   void loop() {
     delay(3);
-    boxClosed = analogRead(PHOTOPIN) < 200;
+    boxClosed = analogRead(PHOTOPIN);
+    Serial.println(boxClosed);
     boolean showQR = digitalRead(D8);
     if (!boxClosed) {
       if (showQR && !shownQRCode) {
@@ -278,25 +331,25 @@ class BoxSocket {
       } else if (!showQR && shownQRCode) {
         Serial.println("stop show");
         shownQRCode = false;
-        return getMsg();
+        return getMsg(GET_MSG_TYPE::REDRAW_MSG);
       }
     }
     socket->loop();
     if (socket->isConnected()) {
-      if (boxClosed) {
-        getNewMsg();
-        if (!userReadMsg && hasMsg()) {
+      if (boxClosed && !gettingMsg) {
+        checkForMsg();
+        if (hasMsg()) {
           fadeAmount += fade;
           analogWrite(D6, (int)fadeAmount);
           if (fadeAmount <= 0 || fadeAmount >= 255) {
             fade = -fade;
           }
         }
-      } else if (!boxClosed) {
+      } else {
         fadeAmount = 0;
+        fade = fabs(fade);
         analogWrite(D6, (int)fadeAmount);
-
-        readMsg();
+        if (!userReadMsg) getMsg(GET_MSG_TYPE::NEW_MSG);
       }
     }
   }
