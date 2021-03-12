@@ -5,10 +5,11 @@
 #include <ESP8266HTTPClient.h>
 #include <qrcode.h>
 
-#define PHOTOPIN 
+#define MAGNET_PIN D0
 
 const char *const SEEN_MSG = "seenMsg";
 const char *const CHECK_FOR_MSG = "checkForMsg";
+const char *const GOT_NEW_MSG = "gotNewMsg";
 const char *const GET_MSG = "getMsg";
 const char *const URL = "192.168.1.2";
 const char *const TOKEN = "cutie";
@@ -16,6 +17,7 @@ const char *const ID = "6010b0545bf32741e1a33c85";
 
 enum ACK_TYPE : byte { NEW_MSG_ACK = 0, REDRAW_MSG_ACK, CHECK_MSG_ACK };
 enum GET_MSG_TYPE : byte { NEW_MSG = 0, REDRAW_MSG };
+enum TXT_SIZE : byte { SMALL = 18, MEDIUM = 35, LARGE = 50 };
 class BoxSocket {
  private:
   TFT_eSPI &tft;
@@ -26,7 +28,7 @@ class BoxSocket {
   boolean checkedForMsg = false;
   boolean shownQRCode = false;
   boolean fadeHeart = false;
-  boolean boxClosed = false;
+  boolean boxOpen = false;
   boolean gettingMsg = false;
   float fade = (250.0F / 500.0F);
   float fadeAmount = 0;
@@ -66,7 +68,7 @@ class BoxSocket {
           auto y2 = points[i + 3].as<uint>();
           int deltaX = x2 - x1;
           int deltaY = y2 - y1;
-          uint numOfPoints = 5;
+          uint numOfPoints = 10;
           for (size_t i = 1; i < numOfPoints; i++) {
             float percentage = (float)i / (float)numOfPoints;
             int betweenX = x1 + (deltaX * percentage);
@@ -79,8 +81,6 @@ class BoxSocket {
     auto texts = msg["data"]["texts"].as<JsonArray>();
     serializeJson(texts, Serial);
     size_t numOfTexts = texts.size();
-    Serial.println(numOfTexts);
-    tft.setTextFont(2);
     tft.setTextDatum(TL_DATUM);
     for (size_t i = 0; i < numOfTexts; i++) {
       auto text = texts[i];
@@ -88,17 +88,20 @@ class BoxSocket {
       auto pos = text["pos"];
       uint xPos = pos[0].as<uint>();
       uint yPos = pos[1].as<uint>();
-      Serial.print(xPos);
-      Serial.print(yPos);
-      Serial.println();
-      uint textSize = text["txtMult"].as<uint>();
+      TXT_SIZE textSize = text["txtSize"].as<TXT_SIZE>();
+      if (textSize == TXT_SIZE::SMALL) {
+        tft.setFreeFont(FSS8);
+      } else if (textSize == TXT_SIZE::MEDIUM) {
+        tft.setFreeFont(FSS16);
+      } else {
+        tft.setFreeFont(FSS24);
+      }
       auto color = text["color"].as<char *>();
       int number = (int)strtoll(color + 1, NULL, 16);
       int r = number >> 16;
       int g = number >> 8 & 0xFF;
       int b = number & 0xFF;
       uint rgb = ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3);
-      tft.setTextSize(textSize);
       Serial.println(rgb);
       tft.setTextColor(rgb, TFT_BLACK);
       tft.drawString(msg, xPos, yPos);
@@ -123,21 +126,19 @@ class BoxSocket {
   }
 
   void parseEvent(char *payload, size_t length) {
-    Serial.println((char *)payload);
     for (size_t i = 0; i < 5U; i++) {
       payload[i] = ' ';
     }
-    DynamicJsonDocument doc(10192);
-    DeserializationError err = deserializeJson(doc, payload);
-
-    if (err) {
-      Serial.println(err.c_str());
-    } else {
-      DynamicJsonDocument doc(10192);
-      JsonArray arr = doc.as<JsonArray>();
-      auto type = arr[0].as<char *>();
-      if (!strcmp(type, GET_MSG)) {
-        // auto msg = arr[1].as<JsonObject>();
+    Serial.println((char *)payload);
+    StaticJsonDocument<96> doc;
+    deserializeJson(doc, payload);
+    JsonArray arr = doc.as<JsonArray>();
+    auto type = arr[0].as<char *>();
+    serializeJson(arr, Serial);
+    if (!strcmp(type, GOT_NEW_MSG)) {
+      if (!hasMsg() && !boxOpen && checkedForMsg) {
+        auto msgID = arr[1].as<char *>();
+        strncpy(currentMsgID, msgID, 25);
       }
     }
   }
@@ -230,11 +231,11 @@ class BoxSocket {
   }
 
   void checkForMsg() {
-
     if (!checkedForMsg && userReadMsg) {
-      tft.fillScreen(TFT_BLACK);
+      currentMsgID[0] = 0;
       userReadMsg = false;
       checkedForMsg = true;
+      tft.fillScreen(TFT_BLACK);
       StaticJsonDocument<128> getMsg;
       JsonArray arr = getMsg.to<JsonArray>();
       arr.add(CHECK_FOR_MSG);
@@ -321,22 +322,19 @@ class BoxSocket {
 
   void loop() {
     delay(3);
-    boxClosed = analogRead(PHOTOPIN);
-    Serial.println(boxClosed);
+    boxOpen = digitalRead(MAGNET_PIN);
     boolean showQR = digitalRead(D8);
-    if (!boxClosed) {
+    if (boxOpen) {
       if (showQR && !shownQRCode) {
-        Serial.println("Show QR");
         return showQRCode();
       } else if (!showQR && shownQRCode) {
-        Serial.println("stop show");
         shownQRCode = false;
         return getMsg(GET_MSG_TYPE::REDRAW_MSG);
       }
     }
     socket->loop();
     if (socket->isConnected()) {
-      if (boxClosed && !gettingMsg) {
+      if (!boxOpen) {
         checkForMsg();
         if (hasMsg()) {
           fadeAmount += fade;

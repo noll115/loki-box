@@ -31,6 +31,7 @@ void setup() {
   WiFi.setAutoConnect(false);
   pinMode(D8, INPUT);
   pinMode(D6, OUTPUT);
+  pinMode(D0, INPUT);
   tft.init();
   tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
