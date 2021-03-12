@@ -1,10 +1,10 @@
 import { StatusBar, StyleSheet, Text, View } from 'react-native';
-import React, { useState } from 'react'
+import React from 'react'
 import { IBox, IMessage } from '../types/general';
 import { ScrollView } from 'react-native-gesture-handler';
 import Svg, { Path, Text as SVGText } from 'react-native-svg';
 import { Line } from '../types/sketchCanvas';
-import CanvasTextInput from './Views/messageView/CanvasTextInput';
+import { FontAwesome } from '@expo/vector-icons';
 
 
 interface Props {
@@ -27,7 +27,6 @@ const Months = [
     'December'
 ]
 
-const BASE_TEXT_WIDTH = 16;
 
 
 export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
@@ -36,9 +35,9 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
     }
     let selectedBoxMessages = messages[selectedBox.box];
     let msgs = selectedBoxMessages.map(({ data: { lines, texts }, seen, sentTime }, index) => (
-        <View key={index} style={{ justifyContent: 'center', alignItems: 'center', marginBottom: 40 }}>
+        <View key={index} style={{ justifyContent: 'center', alignItems: 'center', marginBottom: 70 }}>
             <View style={{ width: 320, height: 240 }}>
-                <Svg style={{ backgroundColor: 'black', width: 320, height: 240 }}>
+                <Svg style={{ backgroundColor: 'black', width: 320, height: 240, borderRadius: 10 }}>
                     {lines.map((line, i) => createPath(line, i))}
 
                     {texts.map((textData, i) =>
@@ -48,7 +47,10 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
                             style={[style.text,
                             {
                                 color: textData.color,
-                                fontSize: BASE_TEXT_WIDTH * textData.txtMult,
+                                fontSize: textData.txtSize,
+                                lineHeight: textData.txtSize,
+                                height: textData.txtSize + 2,
+                                position: 'absolute',
                                 transform: [{
                                     translateX: textData.pos[0],
                                 }, {
@@ -62,15 +64,15 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
                     )
                     }
                 </Svg>
-                <View style={{ flexDirection: 'row', paddingHorizontal: 10 }}>
-                    <Text style={{ flex: 1 }}>{seen ? 'Seen' : 'Not seen'}</Text>
+                <View style={{ flexDirection: 'row', paddingHorizontal: 10, marginTop: 10 }}>
+                    <View style={{ flex: 1, flexDirection: 'row' }}><FontAwesome style={{ marginRight: 10 }} name="heart" size={20} color={seen ? '#D4668E' : '#FEF4EA'} /><Text >{seen ? 'Seen' : 'Sent'}</Text></View>
                     <Text style={{ flex: 1, textAlign: 'right' }}>{`${Months[sentTime.getMonth()]} ${sentTime.getDate()}, ${sentTime.getFullYear()}`}</Text>
                 </View>
             </View>
         </View>
     ))
     return (
-        <ScrollView style={{ marginTop: 20 }}>
+        <ScrollView style={{ paddingTop: 20 }} >
             {msgs}
         </ScrollView>
     )
@@ -94,5 +96,6 @@ function createPath(line: Line, index?: number) {
 let style = StyleSheet.create({
     text: {
         textAlign: 'left',
+        fontFamily: 'FreeSans'
     }
 })

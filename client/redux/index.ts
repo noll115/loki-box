@@ -1,14 +1,12 @@
 import thunk from 'redux-thunk';
 import { rootReducer } from "./reducers"
 import { applyMiddleware, createStore, compose } from 'redux';
+import { API_URL } from '../constants';
 export * from "./actions";
-
-const api = "http://192.168.1.4:3000";
-
 
 const composeEnhancers = (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
 
-const store = createStore(rootReducer, composeEnhancers(applyMiddleware(thunk.withExtraArgument(api))));
+const store = createStore(rootReducer, composeEnhancers(applyMiddleware(thunk.withExtraArgument(API_URL))));
 
 
 

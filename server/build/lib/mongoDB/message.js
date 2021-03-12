@@ -41,7 +41,7 @@ var TextData = /** @class */ (function () {
     __decorate([
         typegoose_1.prop({ required: true }),
         __metadata("design:type", Number)
-    ], TextData.prototype, "fontSize", void 0);
+    ], TextData.prototype, "txtSize", void 0);
     __decorate([
         typegoose_1.prop({ type: Number, required: true }),
         __metadata("design:type", Array)
@@ -90,6 +90,10 @@ var MessageClass = /** @class */ (function () {
         typegoose_1.prop({ ref: function () { return user_1.UserClass; }, required: true, index: true }),
         __metadata("design:type", Object)
     ], MessageClass.prototype, "from", void 0);
+    __decorate([
+        typegoose_1.prop({ required: true }),
+        __metadata("design:type", String)
+    ], MessageClass.prototype, "fromSeenAs", void 0);
     MessageClass = __decorate([
         typegoose_1.ModelOptions({ schemaOptions: { collection: 'messages' } })
     ], MessageClass);

@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput } from 'react-native';
+import { PixelRatio, StyleSheet, TextInput, useWindowDimensions } from 'react-native';
 import Animated, {
     add,
     cond,
@@ -31,7 +31,7 @@ interface MsgProps {
     sketchDispatch: React.Dispatch<ReducerActions>,
     enabled: boolean
 }
- const BASE_TEXT_WIDTH = 16;
+
 const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWidth, index, sketchDispatch, enabled }) => {
 
 
@@ -44,6 +44,7 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
     let dragY = useValue(0);
     let offsetX = useValue(textData.pos[0]);
     let offsetY = useValue(textData.pos[1]);
+    let [pos, setPos] = useState([textData.pos[0], textData.pos[1]]);
     let gestureState = useValue(-1);
     let textDataRef = useRef<TextData>(textData);
 
@@ -59,11 +60,11 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
 
     let enableEditable = () => {
         setEditable(true);
+        sketchDispatch({ type: CanvasActions.EDITING_TEXT, isEditingText: true });
     }
 
     let updatePos = ([x, y]: readonly number[]) => {
-        console.log(x,y);
-        
+        setPos([x, y]);
         sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current, pos: [x, y] } })
     }
 
@@ -73,6 +74,13 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
                 translationX: dragX,
                 translationY: dragY,
                 state: (state: State) => block([
+                    cond(eq(state, State.UNDETERMINED),
+                        [
+                            set(offsetX, min(max(0, add(offsetX, dragX)), sub(canvasWidth, textWidth))),
+                            set(offsetY, min(max(0, add(offsetY, dragY)), sub(canvasHeight, textHeight))),
+                            call([offsetX, offsetY], updatePos)
+                        ]
+                    ),
                     cond(
                         eq(state, State.BEGAN),
                         set(gestureState, State.BEGAN as number)
@@ -120,14 +128,12 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
         offsetY
     );
 
-
-    let changeEdit = () => {
-        setEditable(false);
+    let onEndEditing = () => {
         if (textDataRef.current.text === '') {
-            return sketchDispatch({ type: CanvasActions.REMOVE_TEXT, index });
+            sketchDispatch({ type: CanvasActions.REMOVE_TEXT, index });
         }
-
-        sketchDispatch({ type: CanvasActions.CHANGE_TEXT, index, newTextData: { ...textDataRef.current } })
+        setEditable(false);
+        sketchDispatch({ type: CanvasActions.EDITING_TEXT, isEditingText: false });
     }
 
 
@@ -147,24 +153,26 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
         >
             <TextInput
                 onLayout={({ nativeEvent }: any) => {
+
                     let width = nativeEvent.layout.width;
                     let height = nativeEvent.layout.height;
                     textHeight.setValue(height);
                     textWidth.setValue(width);
                 }}
                 value={textData.text}
-                textAlign='center'
                 editable={editable}
                 maxLength={15}
-                onBlur={changeEdit}
-                onEndEditing={changeEdit}
+                onEndEditing={onEndEditing}
                 ref={textRef}
                 onChangeText={changeText}
+                keyboardType='email-address'
+                allowFontScaling={false}
                 style={[style.text, {
                     color: textData.color,
-                    fontSize: BASE_TEXT_WIDTH * textData.txtMult,
-                    maxWidth: canvasWidth - 10,
-                    maxHeight: canvasHeight - 10
+                    fontSize: textData.txtSize,
+                    maxWidth: canvasWidth - pos[0],
+                    lineHeight: textData.txtSize,
+                    height: textData.txtSize + 2,
                 }]} />
             <PanGestureHandler
                 onHandlerStateChange={onGesturePan}
@@ -182,9 +190,10 @@ const _CanvasTextInput: React.FC<MsgProps> = ({ textData, canvasHeight, canvasWi
 
 let style = StyleSheet.create({
     text: {
-        textAlign: 'left',
+        // textAlign: 'left',
+        fontFamily: 'FreeSans'
     }
 })
 
 const CanvasTextInput = _CanvasTextInput;
-export default CanvasTextInput; 
+export default CanvasTextInput;

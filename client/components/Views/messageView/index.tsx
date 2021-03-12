@@ -46,7 +46,7 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation, socketState: {
                         <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
                     </View>
                     <View style={styles.body}>
-                        {socket && <SketchCanvas height={240} width={320} bannerHeight={bannerHeight} onSubmit={submit} socket={socket} box={box} />}
+                        <SketchCanvas height={240} width={320} bannerHeight={bannerHeight} onSubmit={submit} socket={socket!} box={box} />
                     </View>
                 </>
             }

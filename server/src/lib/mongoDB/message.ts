@@ -17,7 +17,7 @@ export class TextData {
     @prop({ required: true })
     public text!: string
     @prop({ required: true })
-    public txtMult!: number
+    public txtSize!: number
     @prop({ type: Number, required: true })
     public pos!: number[]
     @prop({ required: true })

@@ -102,7 +102,7 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
                     if (boxSocket) {
                         let socketInstance = namespaces.box.sockets.get(boxSocket);
                         if (socketInstance) {
-                            socketInstance.emit('sendMsg', newMsg.data, newMsg.from, box.seenAs)
+                            socketInstance.emit('gotNewMsg', newMsg._id);
                         }
                     }
                     cb({ status: 'ok' })

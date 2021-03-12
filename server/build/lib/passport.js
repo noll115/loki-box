@@ -131,10 +131,10 @@ passport_1.default.use("login", new passport_local_1.Strategy({
 }); }));
 function SocketVerifyUserJWT(socket, next) {
     var userSocket = socket;
+    console.log('user');
     passport_1.default.authenticate('user-jwt', { session: false }, function (err, user, info) {
         if (!user || err)
-            return userSocket.emit('jwt failed');
-        console.log(user);
+            return userSocket.emit('jwt_failed');
         userSocket.user = user;
         next();
     })(userSocket.request, {}, next);
@@ -144,7 +144,7 @@ function SocketVerifyBoxJWT(socket, next) {
     var boxSocket = socket;
     passport_1.default.authenticate('box-jwt', { session: false }, function (err, box, info) {
         if (!box || err)
-            return boxSocket.emit('jwt failed');
+            return boxSocket.emit('jwt_failed');
         boxSocket.box = box;
         next();
     })(boxSocket.request, {}, next);
