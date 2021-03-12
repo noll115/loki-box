@@ -18,16 +18,29 @@ export interface Line {
 
 export interface TextData {
     text: string,
-    txtMult: number,
+    txtSize: number,
     pos: [number, number],
     color: string,
 }
 
+export interface SketchState {
+    color: string,
+    lineWidth: number,
+    textSize: number,
+    currentTool: CanvasTools,
+    canvasState: CanvasState,
+    scale: number,
+    currentLine: Line | null,
+    lines: Line[],
+    texts: TextData[],
+    editingText: boolean,
+    empty: boolean
+}
 
 export enum CanvasActions {
     SET_COLOR,
     SET_LINEWIDTH,
-    SET_TEXT_MULTIPLIER,
+    SET_TEXT_SIZE,
     SET_TOOL,
     SET_STATE,
     SET_SCALE,
@@ -35,22 +48,11 @@ export enum CanvasActions {
     SET_CURRENTLINE,
     CURRENT_LINE_FINISHED,
     ADD_TEXT,
+    EDITING_TEXT,
     CHANGE_TEXT,
     REMOVE_TEXT
 }
 
-export interface SketchState {
-    color: string,
-    lineWidth: number,
-    textSizeMultiplier: number,
-    currentTool: CanvasTools,
-    canvasState: CanvasState,
-    scale: number,
-    currentLine: Line | null,
-    lines: Line[],
-    texts: TextData[],
-    empty: boolean
-}
 export type ReducerActions = {
     type: CanvasActions.SET_COLOR,
     color: string
@@ -58,8 +60,8 @@ export type ReducerActions = {
     type: CanvasActions.SET_LINEWIDTH,
     lineWidth: number
 } | {
-    type: CanvasActions.SET_TEXT_MULTIPLIER,
-    textMult: number
+    type: CanvasActions.SET_TEXT_SIZE,
+    txtMult: number
 } | {
     type: CanvasActions.SET_TOOL,
     tool: CanvasTools
@@ -79,6 +81,9 @@ export type ReducerActions = {
 } | {
     type: CanvasActions.ADD_TEXT,
     text: TextData
+} | {
+    type: CanvasActions.EDITING_TEXT,
+    isEditingText: boolean
 } | {
     type: CanvasActions.CHANGE_TEXT,
     index: number,

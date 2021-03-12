@@ -16,12 +16,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from 'react'
-import { StyleSheet, View, Keyboard, KeyboardEventListener, Text } from 'react-native';
-import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState } from "./../../../types/sketchCanvas";
+import Svg, { Path } from 'react-native-svg';
+import { STROKE_SIZES, TEXT_SIZES } from '../../../constants';
 
 
-const BTN_SIZE = 70;
+const BTN_SIZE = 50;
 const SELECTOR_SIZE = 30
 const WHITE = -1;
 
@@ -188,17 +190,92 @@ const Slider: React.FC<{ onValueChange(newVal: number): void, range: [number, nu
         </PanGestureHandler >)
 }
 
+interface sketchBtnProps {
+    iconName?: string,
+    onPress(): void,
+    disabled?: boolean,
+    selected?: boolean,
+    innerText?: string
+}
+
+const SketchButton: React.FC<sketchBtnProps> = ({ iconName, onPress, disabled, selected, innerText }) => {
+    return (
+        <Pressable
+            onPress={onPress}
+            disabled={disabled}
+            style={[canvasBtnStyle.modeBtn, innerText !== undefined && canvasBtnStyle.modeBtnHasText, disabled && !selected && canvasBtnStyle.modeBtnDisabled, selected && canvasBtnStyle.modeBtnSelected]}
+        >
+            { iconName && <MaterialCommunityIcons style={[canvasBtnStyle.modeBtnInner, selected && canvasBtnStyle.modeBtnInnerSelected]} name={iconName as any} />}
+            { !iconName && <Text style={[canvasBtnStyle.modeBtnInner, { fontSize: 18 }]}>{innerText}</Text>}
+        </Pressable >
+    )
+}
 
 
+const StrokePathExamples: React.FC<{ currentTool: CanvasTools, setLineWidth(strokeSize: number): void, setTextSize(textSize: number): void }> = ({ currentTool, setLineWidth, setTextSize }) => {
+    let [selected, setSelected] = useState(0);
+
+    useEffect(() => {
+        setSelected(0);
+        setLineWidth(STROKE_SIZES[0]);
+        setTextSize(TEXT_SIZES[0]);
+    }, [currentTool])
+
+
+    let btns = null;
+    if (currentTool === CanvasTools.DRAW) {
+        btns = STROKE_SIZES.map((strokeSize, i) =>
+            <Pressable
+                key={i}
+                style={{ flex: 1, marginHorizontal: 5, borderRadius: 10, opacity: selected === i ? 1 : 0.6 }}
+                onPress={() => {
+                    setSelected(i);
+                    setLineWidth(strokeSize);
+                }}
+            >
+                <Svg style={{ width: '100%', height: '100%' }} >
+                    <Path
+                        d="M20,70 C70,-40 50,150 100,30"
+                        strokeWidth={strokeSize}
+                        fill='none'
+                        strokeLinecap="round"
+                        stroke='#FEF4EA' />
+                </Svg>
+            </Pressable>
+        )
+    } else {
+        btns = TEXT_SIZES.map((textSize, i) =>
+            <View
+                key={i}
+                style={{ flex: 1, marginHorizontal: 5, borderRadius: 10, opacity: selected === i ? 1 : 0.6 }}
+            >
+                <Pressable
+                    style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
+                    onPress={() => {
+                        setSelected(i);
+                        setTextSize(textSize);
+                    }}
+                >
+                    <MaterialIcons name="text-fields" size={textSize} color='#FEF4EA' />
+                </Pressable>
+            </View>
+        )
+    }
+
+    return (
+        <View style={{ flexDirection: 'row', height: 120, paddingVertical: 10, backgroundColor: '#443641', width: '100%', borderRadius: 10 }}>
+            {btns}
+        </View >
+    );
+}
 
 
 
 function DrawingBtns(sketchState: SketchState, sketchDispatch: React.Dispatch<ReducerActions>) {
     let { currentTool } = sketchState
 
-    let txtAddition = currentTool === CanvasTools.TEXT ? 'Text' : 'Stroke';
-    let textRange: [number, number] = [1, 7];
-    let lineRange: [number, number] = [10, 24];
+    let drawing = currentTool === CanvasTools.DRAW;
+
     let setColor = (color: string) => {
         sketchDispatch({ type: CanvasActions.SET_COLOR, color })
     }
@@ -206,61 +283,42 @@ function DrawingBtns(sketchState: SketchState, sketchDispatch: React.Dispatch<Re
     let setLineWidth = (lineWidth: number) => {
         sketchDispatch({ type: CanvasActions.SET_LINEWIDTH, lineWidth })
     }
-    let setTextWidth = (textMult: number) => {
-        sketchDispatch({ type: CanvasActions.SET_TEXT_MULTIPLIER, textMult });
+    let setTextSize = (txtSize: number) => {
+        sketchDispatch({ type: CanvasActions.SET_TEXT_SIZE, txtMult: txtSize });
     }
 
     let switchTools = () => {
         let nextTool = currentTool === CanvasTools.TEXT ? CanvasTools.DRAW : CanvasTools.TEXT;
         sketchDispatch({ type: CanvasActions.SET_TOOL, tool: nextTool })
     }
-    let clearCanvas = () => {
-        sketchDispatch({ type: CanvasActions.CLEAR_CANVAS });
-    }
+
     let submit = () => {
         sketchDispatch({ type: CanvasActions.SET_STATE, state: CanvasState.SUBMITTING });
     }
     return (
-        <View style={{ width: '100%', height: '100%' }}>
-            <View style={{ flex: 4, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={canvasBtnStyle.sliderText}>{txtAddition} Color:</Text>
-                <ColorSlider setColor={setColor} />
-                <Text style={canvasBtnStyle.sliderText}>{txtAddition} Size:</Text>
-                {
-                    currentTool === CanvasTools.TEXT ?
-                        <Slider key={'text'} onValueChange={setTextWidth} range={textRange} startVal={textRange[0]} /> :
-                        <Slider key={'line'} onValueChange={setLineWidth} range={lineRange} startVal={lineRange[0]} />
-                }
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+            <View style={{ alignSelf: 'flex-end', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', paddingBottom: 10, alignItems: 'center', width: '100%', height: 45 }}>
+                    <View style={{ flex: 3 }}>
+                        <View style={{ flexDirection: 'row', width: '40%', justifyContent: 'space-evenly' }}>
+                            <SketchButton iconName='text-box-plus-outline' onPress={switchTools} disabled={!drawing} selected={!drawing} />
+                            <SketchButton iconName='draw' onPress={switchTools} disabled={drawing} selected={drawing} />
+                        </View>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <SketchButton innerText='Send' disabled={sketchState.empty} onPress={submit} />
+                    </View>
+                </View>
+                <View style={{ width: '100%', backgroundColor: '#2D242B', paddingVertical: 10, paddingHorizontal: 5 }}>
+                    <View style={{ paddingVertical: 20, marginBottom: 5, backgroundColor: '#443641', alignItems: 'center', borderRadius: 10 }}>
+                        <View style={{ width: '85%' }}>
+                            <ColorSlider setColor={setColor} />
+                        </View>
+                    </View>
+                    <StrokePathExamples setTextSize={setTextSize} setLineWidth={setLineWidth} currentTool={currentTool} />
+                </View>
             </View>
-            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                <TouchableOpacity style={[canvasBtnStyle.modeBtn, sketchState.empty && canvasBtnStyle.modeBtnDisabled]}
-                    onPress={submit}
-                    disabled={sketchState.empty}
-                >
-                    <MaterialCommunityIcons name="send" size={BTN_SIZE / 3} color="black" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={clearCanvas}
-                    style={[canvasBtnStyle.modeBtn, { backgroundColor: '#8C1C13' }]}
-                >
-                    <Feather name="trash-2" size={BTN_SIZE / 3} color="#FEF4EA" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={switchTools}
-                    style={[canvasBtnStyle.modeBtn, currentTool === CanvasTools.TEXT && canvasBtnStyle.modeBtnSelected]}
-                    disabled={currentTool === CanvasTools.TEXT}
-                >
-                    <MaterialCommunityIcons name="text-box-plus-outline" size={BTN_SIZE / 3} color="black" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={switchTools}
-                    style={[canvasBtnStyle.modeBtn, currentTool === CanvasTools.DRAW && canvasBtnStyle.modeBtnSelected]}
-                    disabled={currentTool === CanvasTools.DRAW}
-                >
-                    <MaterialCommunityIcons name="draw" size={BTN_SIZE / 3} color="black" />
-                </TouchableOpacity>
-            </View>
-        </View>
+        </View >
     )
 }
 
@@ -288,30 +346,31 @@ const canvasBtnStyle = StyleSheet.create({
         alignItems: 'center',
     },
     modeBtn: {
-        width: BTN_SIZE,
-        height: BTN_SIZE,
-        backgroundColor: '#FEF4EA',
-        borderRadius: BTN_SIZE / 2,
+        padding: 5,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        borderRadius: 45,
+        backgroundColor: '#FEF4EA',
+        alignSelf: 'center',
+        opacity: 1
+
+    },
+    modeBtnInner: {
+        fontSize: 27,
+        color: '#2D242B',
     },
     modeBtnDisabled: {
-        shadowOpacity: 0,
-        elevation: 0,
-        backgroundColor: '#FFB8D0'
+        opacity: 0.4
     },
     modeBtnSelected: {
-        backgroundColor: '#FFB8D0',
-        shadowOpacity: 0,
-        elevation: 0,
+        backgroundColor: '#8C1C13',
+        
+    },
+    modeBtnInnerSelected: {
+        color: '#FEF4EA',
+    },
+    modeBtnHasText: {
+        paddingHorizontal: 14
     },
     sliderText: {
         fontSize: 20,
@@ -319,8 +378,8 @@ const canvasBtnStyle = StyleSheet.create({
     },
     slider: {
         justifyContent: 'center',
-        width: '80%',
-        height: 100,
+        width: '100%',
+        height: 20
     },
     gradContainer: {
         justifyContent: 'center',
@@ -329,7 +388,7 @@ const canvasBtnStyle = StyleSheet.create({
     },
     grad: {
         borderRadius: 20,
-        height: 20,
+        height: '100%',
         width: '100%',
     },
     selector: {

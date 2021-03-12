@@ -14,13 +14,14 @@ import { IBox, IMessageData } from "../../../types/general";
 let INIT_STATE: SketchState = {
     color: '#FFFFFF',
     lineWidth: 12,
-    textSizeMultiplier: 1,
+    textSize: 1,
     currentTool: CanvasTools.DRAW,
     canvasState: CanvasState.EDITING,
     scale: 1,
     currentLine: null,
     lines: [],
     texts: [],
+    editingText: false,
     empty: true
 }
 
@@ -33,8 +34,8 @@ let canvasReducer = (prevState: SketchState, action: ReducerActions): SketchStat
             return { ...prevState, color: action.color }
         case CanvasActions.SET_LINEWIDTH:
             return { ...prevState, lineWidth: action.lineWidth };
-        case CanvasActions.SET_TEXT_MULTIPLIER:
-            return { ...prevState, textSizeMultiplier: action.textMult }
+        case CanvasActions.SET_TEXT_SIZE:
+            return { ...prevState, textSize: action.txtMult }
         case CanvasActions.SET_STATE:
             return { ...prevState, canvasState: action.state };
         case CanvasActions.SET_TOOL:
@@ -45,6 +46,8 @@ let canvasReducer = (prevState: SketchState, action: ReducerActions): SketchStat
             return { ...prevState, lines: [], texts: [], empty: true };
         case CanvasActions.SET_CURRENTLINE:
             return { ...prevState, currentLine: action.line };
+        case CanvasActions.EDITING_TEXT:
+            return { ...prevState, editingText: action.isEditingText }
         case CanvasActions.CURRENT_LINE_FINISHED:
             let { lines: prevLines, currentLine, texts } = prevState;
             if (currentLine)
@@ -59,7 +62,7 @@ let canvasReducer = (prevState: SketchState, action: ReducerActions): SketchStat
             return prevState;
         case CanvasActions.ADD_TEXT:
             let { texts: prevTexts } = prevState;
-            return { ...prevState, texts: [...prevTexts, action.text], empty: false };
+            return { ...prevState, texts: [...prevTexts, action.text], empty: false, editingText: true };
         case CanvasActions.CHANGE_TEXT:
             let textChanging = [...prevState.texts];
             textChanging[action.index] = action.newTextData;
@@ -229,7 +232,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 
         let newText: TextData = {
             text: '',
-            txtMult: state.textSizeMultiplier,
+            txtSize: state.textSize,
             pos: [x, y],
             color: state.color
         };
@@ -304,14 +307,13 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
         inputRange: [0, 1, 2],
         outputRange: [1, 1.3, 20]
     });
-
-
     return (
         <>
-            <Animated.View style={{ transform: [{ scale: state.scale }] }}>
+            <View style={{ transform: [{ scale: state.scale }], marginBottom: (state.scale * height) - height }}>
                 <PanGestureHandler maxPointers={1}
                     onHandlerStateChange={submitting ? undefined : handlePanGesture}
                     onGestureEvent={submitting ? undefined : handlePanGesture}
+                    enabled={!state.editingText}
                 >
                     <Animated.View>
                         <Svg
@@ -319,6 +321,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
                                 backgroundColor: 'black',
                                 height: height,
                                 width: width,
+                                borderRadius: 10
                             }}
                         >
                             {paths}
@@ -337,8 +340,8 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
                     />
                 )
                 }
-            </Animated.View >
-            { canvasBtns}
+            </View >
+            {canvasBtns}
             {
                 state.canvasState === CanvasState.SUBMITTING &&
                 <Animated.View style={[style.loadingScreen, { opacity: opacityAnim }]}>
@@ -371,12 +374,12 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
 const style = StyleSheet.create({
     loadingScreen: {
         ...StyleSheet.absoluteFillObject,
+        zIndex: 0,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(0,0,0,0.3)'
     },
 })
-
 function createPath(line: Line, index?: number) {
     let { points, lineWidth, color } = line;
     let d = `M ${points[0]} ${points[1]}`;

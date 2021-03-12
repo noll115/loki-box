@@ -107,11 +107,11 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
             <BoxListHeader onOpenBoxMenu={() => setBoxMenuOpen(true)} />
             {selectedBox && <MessageList selectedBox={selectedBox} messages={messages} />}
             <View style={{ flexDirection: 'row', position: 'absolute', width: '100%', height: 70, bottom: '4%', paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center' }}>
-                {selectedBox && <Button title='Send a Message' onPress={() => {
+                {selectedBox && <Button title={'Send a Message'} icon={<FontAwesome name="heart" size={20} color="#FEF4EA" />} enableShadow onPress={() => {
                     navigation.navigate('SendMessage', {
                         box: selectedBox!
                     })
-                }} btnStyle={{ flex: 1, marginHorizontal: 20 }} />}
+                }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50 }} />}
             </View>
             <QRScanner onScan={OnScanBox} showCam={viewCam} onClose={OnCloseScanner} />
             <DrawerMenu btns={drawerMenuBtns} />

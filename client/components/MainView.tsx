@@ -7,6 +7,7 @@ import { createStackNavigator } from '@react-navigation/stack'
 import { AUTH_STATE } from '../types/redux';
 import { LoginView, RegisterView, HomeView } from './Views';
 import { RootStackParamList } from '../types/navigation';
+import { useFonts } from 'expo-font';
 
 
 
@@ -60,11 +61,15 @@ type Props = ConnectedProps<typeof connector>;
 
 
 const MainView: React.FC<Props> = ({ authState, GetTokenInStorage }) => {
+    const [loaded] = useFonts({
+        FreeSans: require('../assets/fonts/FreeSans-1Zge.otf')
+    });
 
     useEffect(() => {
-        GetTokenInStorage();
-    }, [])
-
+        if (loaded) {
+            GetTokenInStorage();
+        }
+    }, [loaded])
     return (
         <NavigationContainer >
             <Stack.Navigator headerMode='none'>

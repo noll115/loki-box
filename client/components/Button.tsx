@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { StyleSheet, TouchableOpacity, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, TouchableOpacity, Text, StyleProp, ViewStyle, TextStyle, View } from 'react-native';
 
 
 interface Props {
@@ -8,15 +8,16 @@ interface Props {
     isDisabled?: boolean,
     btnStyle?: StyleProp<ViewStyle>,
     textStyle?: StyleProp<TextStyle>,
-    enableShadow?: boolean
+    enableShadow?: boolean,
+    icon?: JSX.Element
 }
 
 
 
-const Button: React.FC<Props> = ({ btnStyle, textStyle, onPress, title, isDisabled, enableShadow }) => {
+const Button: React.FC<Props> = ({ btnStyle, textStyle, onPress, title, isDisabled, icon, enableShadow }) => {
     return (
         <TouchableOpacity onPress={onPress} style={[styles.button, btnStyle, isDisabled && styles.btnDisabled, enableShadow && styles.btnShadow]} disabled={isDisabled}>
-            <Text style={[styles.btnText, textStyle]}>{title}</Text>
+            <Text style={[styles.btnText, textStyle]}>{title}</Text>{icon && <View style={{ marginLeft: 9 }}>{icon}</View>}
         </TouchableOpacity>
     );
 }
@@ -24,11 +25,13 @@ const Button: React.FC<Props> = ({ btnStyle, textStyle, onPress, title, isDisabl
 
 const styles = StyleSheet.create({
     button: {
+        position: 'relative',
         backgroundColor: '#D4668E',
         borderRadius: 10,
         padding: '5%',
         alignItems: 'center',
         justifyContent: 'center',
+        flexDirection: 'row',
 
     },
     btnShadow: {
@@ -42,7 +45,8 @@ const styles = StyleSheet.create({
         elevation: 6
     },
     btnText: {
-        color: '#171216',
+        textAlign: 'center',
+        color: '#FEF4EA',
         fontWeight: 'bold',
         fontSize: 20
     },

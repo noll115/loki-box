@@ -178,13 +178,14 @@ exports.default = (function (passport, sockets, namespaces) {
                                     data: msg,
                                     from: socket.user.id,
                                     to: boxID,
+                                    fromSeenAs: box.seenAs
                                 })];
                         case 2:
                             newMsg = _a.sent();
                             if (boxSocket) {
                                 socketInstance = namespaces.box.sockets.get(boxSocket);
                                 if (socketInstance) {
-                                    socketInstance.emit('sendMsg', newMsg.data, newMsg.from, box.seenAs);
+                                    socketInstance.emit('gotNewMsg', newMsg);
                                 }
                             }
                             cb({ status: 'ok' });
