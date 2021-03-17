@@ -150,9 +150,7 @@ function heartAnim(clock: Clock, shouldAnim: Animated.Value<number>) {
             startClock(clock)
         ),
 
-        // we run the step here that is going to update position
         timing(clock, state, config),
-        // if the animation is over we stop the clock
         cond(state.finished, [
             cond(
                 shouldPulse,
@@ -172,7 +170,6 @@ function heartAnim(clock: Clock, shouldAnim: Animated.Value<number>) {
                 )
             ),
         ]),
-        // we made the block return the updated position
         state.position
     ]);
 
@@ -182,13 +179,13 @@ function heartAnim(clock: Clock, shouldAnim: Animated.Value<number>) {
 interface Props {
     width: number,
     height: number,
-    bannerHeight: number,
+
     onSubmit(): void,
     socket: Socket,
     box: IBox
 }
 
-export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onSubmit, socket, box }) => {
+export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket, box }) => {
     let [state, dispatch] = useReducer(canvasReducer, INIT_STATE);
     const window = useWindowDimensions()
     let submitting = state.canvasState === CanvasState.SUBMITTING;
@@ -202,7 +199,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, bannerHeight, onS
     useEffect(() => {
         let scale = (window.width - 20) / width;
         dispatch({ type: CanvasActions.SET_SCALE, scale })
-    }, [bannerHeight, window])
+    }, [window])
 
     useEffect(() => {
         if (state.canvasState === CanvasState.SUBMITTING) {

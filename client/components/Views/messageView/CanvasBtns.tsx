@@ -16,16 +16,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from 'react'
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable, ViewStyle, StyleProp, TextStyle } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState } from "./../../../types/sketchCanvas";
 import Svg, { Path } from 'react-native-svg';
 import { STROKE_SIZES, TEXT_SIZES } from '../../../constants';
 
 
-const BTN_SIZE = 50;
 const SELECTOR_SIZE = 30
-const WHITE = -1;
 
 
 const ColorSlider: React.FC<{ setColor(col: string): void }> = ({ setColor }) => {
@@ -195,24 +193,26 @@ interface sketchBtnProps {
     onPress(): void,
     disabled?: boolean,
     selected?: boolean,
-    innerText?: string
+    innerText?: string,
+    btnStyle?: StyleProp<ViewStyle>,
+    textStyle?: StyleProp<TextStyle>
 }
 
-const SketchButton: React.FC<sketchBtnProps> = ({ iconName, onPress, disabled, selected, innerText }) => {
+const SketchButton: React.FC<sketchBtnProps> = ({ iconName, onPress, disabled, selected, innerText, btnStyle, textStyle }) => {
     return (
         <Pressable
             onPress={onPress}
             disabled={disabled}
-            style={[canvasBtnStyle.modeBtn, innerText !== undefined && canvasBtnStyle.modeBtnHasText, disabled && !selected && canvasBtnStyle.modeBtnDisabled, selected && canvasBtnStyle.modeBtnSelected]}
+            style={[canvasBtnStyle.modeBtn, innerText !== undefined && canvasBtnStyle.modeBtnHasText, disabled && !selected && canvasBtnStyle.modeBtnDisabled, selected && canvasBtnStyle.modeBtnSelected, btnStyle]}
         >
             { iconName && <MaterialCommunityIcons style={[canvasBtnStyle.modeBtnInner, selected && canvasBtnStyle.modeBtnInnerSelected]} name={iconName as any} />}
-            { !iconName && <Text style={[canvasBtnStyle.modeBtnInner, { fontSize: 18 }]}>{innerText}</Text>}
+            { !iconName && <Text style={[canvasBtnStyle.modeBtnInner, { fontSize: 18 }, textStyle]}>{innerText}</Text>}
         </Pressable >
     )
 }
 
 
-const StrokePathExamples: React.FC<{ currentTool: CanvasTools, setLineWidth(strokeSize: number): void, setTextSize(textSize: number): void }> = ({ currentTool, setLineWidth, setTextSize }) => {
+const ToolSizes: React.FC<{ currentTool: CanvasTools, setLineWidth(strokeSize: number): void, setTextSize(textSize: number): void }> = ({ currentTool, setLineWidth, setTextSize }) => {
     let [selected, setSelected] = useState(0);
 
     useEffect(() => {
@@ -306,7 +306,7 @@ function DrawingBtns(sketchState: SketchState, sketchDispatch: React.Dispatch<Re
                         </View>
                     </View>
                     <View style={{ flex: 1 }}>
-                        <SketchButton innerText='Send' disabled={sketchState.empty} onPress={submit} />
+                        <SketchButton btnStyle={{ backgroundColor: '#D4668E' }} textStyle={{ color: '#FEF4EA' }} innerText='Send' disabled={sketchState.empty || sketchState.canvasState === CanvasState.SUBMITTING} onPress={submit} />
                     </View>
                 </View>
                 <View style={{ width: '100%', backgroundColor: '#2D242B', paddingVertical: 10, paddingHorizontal: 5 }}>
@@ -315,7 +315,7 @@ function DrawingBtns(sketchState: SketchState, sketchDispatch: React.Dispatch<Re
                             <ColorSlider setColor={setColor} />
                         </View>
                     </View>
-                    <StrokePathExamples setTextSize={setTextSize} setLineWidth={setLineWidth} currentTool={currentTool} />
+                    <ToolSizes setTextSize={setTextSize} setLineWidth={setLineWidth} currentTool={currentTool} />
                 </View>
             </View>
         </View >
@@ -364,7 +364,7 @@ const canvasBtnStyle = StyleSheet.create({
     },
     modeBtnSelected: {
         backgroundColor: '#8C1C13',
-        
+
     },
     modeBtnInnerSelected: {
         color: '#FEF4EA',

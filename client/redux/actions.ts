@@ -117,8 +117,9 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
 
         let socket = io(`${api}/user`, {
             extraHeaders: {
-                authorization: `Bearer ${jwt}`
+                authorization: `Bearer ${jwt}`,
             },
+            reconnectionAttempts: 2,
             transports: ['websocket'],
         });
         socket.on('connect', () => {
@@ -156,9 +157,7 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
             }
         })
         socket.on('connect_error', (err: Error) => {
-            console.log("Socket Error");
-            console.log(err);
-            
+            console.log("connect error");
             dispatch({
                 type: SocketActionTypes.SOCKET_DISCONNECTED,
                 payload: {
@@ -168,7 +167,7 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
         });
         socket.on('jwt_failed', () => {
             console.log("JWT failed");
-            
+
             dispatch(Logout());
         })
         socket.on('disconnect', () => {
@@ -195,7 +194,7 @@ export const RefreshMessages = (box?: IBox): ThunkAction<Promise<void>, RootStat
             let selectedBox = box || user.selectedBox;
             if (socket && selectedBox)
                 socket.emit('getMsgHistory', selectedBox.box, data => {
-                    
+
                     if (data.status === 'ok') {
                         console.log(data.msgs);
                         dispatch({

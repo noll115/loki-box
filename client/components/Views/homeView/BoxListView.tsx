@@ -1,9 +1,8 @@
-import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import Button from '../../Button';
-import { Feather, FontAwesome } from "@expo/vector-icons";
+import { FontAwesome } from "@expo/vector-icons";
 import QRScanner, { ScannedBox } from './QRScanner';
-import { StyleSheet, Text, View, Animated } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react'
+import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react'
 import { StackNavProp } from './homeViewNav';
 import { RootState, SelectBox } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
@@ -25,26 +24,19 @@ const connector = connect(mapState, mapDispatch);
 type Props = ConnectedProps<typeof connector> & StackNavProp<'BoxList'>
 
 
-const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
+const BoxListView: React.FC<Props> = ({ navigation, user }) => {
     const [viewCam, setViewCam] = useState(false);
+    const [btnDisabled, setBtnDisabled] = useState(false);
     let { boxes, messages, selectedBox } = user;
-    const [BoxMenuOpen, setBoxMenuOpen] = useState(false);
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-
     useEffect(() => {
-        if (BoxMenuOpen) {
-            Animated.timing(fadeAnim, {
-                duration: 250,
-                toValue: 1,
-                useNativeDriver: true
-            }).start()
-        }
-    }, [BoxMenuOpen])
+        let removeListener = navigation.addListener('focus', () => {
+            setBtnDisabled(false);
+        });
+        return removeListener;
+    }, [])
 
     if (!boxes)
         return null;
-
-
 
     const OnScanBox = (box: ScannedBox) => {
         console.log(box);
@@ -60,37 +52,6 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
 
 
 
-    const closeMenu = () => {
-        Animated.timing(fadeAnim, {
-            duration: 250,
-            toValue: 0,
-            useNativeDriver: true,
-        }).start(({ finished }) => {
-            if (finished)
-                setBoxMenuOpen(false);
-        })
-    }
-
-    let menuItems = boxes.map((box, index) => {
-        let isFirst = index === 0;
-        if (box.box === selectedBox?.box) {
-            return null;
-        }
-        return (
-            <View key={index}>
-                { !isFirst && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#2d242b' }}></View>}
-                <TouchableOpacity
-                    style={styles.boxMenuItems}
-                    onPress={() => {
-                        SelectBox(box);
-                    }}>
-                    <Text style={{ fontSize: 20, fontWeight: 'bold', textTransform: 'capitalize' }}>{box.boxName}</Text>
-                </TouchableOpacity>
-            </View>
-        )
-
-    });
-
     let drawerMenuBtns = {
         'Add a box':
         {
@@ -104,29 +65,25 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
 
     return (
         <>
-            <BoxListHeader onOpenBoxMenu={() => setBoxMenuOpen(true)} />
+            <BoxListHeader />
             {selectedBox && <MessageList selectedBox={selectedBox} messages={messages} />}
-            <View style={{ flexDirection: 'row', position: 'absolute', width: '100%', height: 70, bottom: '4%', paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center' }}>
-                {selectedBox && <Button title={'Send a Message'} icon={<FontAwesome name="heart" size={20} color="#FEF4EA" />} enableShadow onPress={() => {
-                    navigation.navigate('SendMessage', {
-                        box: selectedBox!
-                    })
-                }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50 }} />}
+            <View style={styles.sendMsgBtn}>
+                {selectedBox &&
+                    <Button
+                        title={'Send a Message'}
+                        icon={<FontAwesome name="heart" size={20} color="#FEF4EA" />}
+                        isDisabled={btnDisabled}
+                        onPress={() => {
+                            setBtnDisabled(true);
+                            navigation.push('SendMessage', {
+                                box: selectedBox!
+                            })
+                        }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50, elevation: 4 }} />
+                }
             </View>
             <QRScanner onScan={OnScanBox} showCam={viewCam} onClose={OnCloseScanner} />
             <DrawerMenu btns={drawerMenuBtns} />
-            {BoxMenuOpen &&
-                <Animated.View style={[styles.boxMenu, { opacity: fadeAnim }]}>
-                    <View style={{ padding: 15, backgroundColor: '#FEF4EA', borderRadius: 10, width: '75%', height: '50%' }}>
-                        <TouchableOpacity onPress={closeMenu}>
-                            <Feather name='x' size={30} color='#2d242b' style={{ marginVertical: 5 }} />
-                        </TouchableOpacity>
-                        <ScrollView>
-                            {menuItems}
-                        </ScrollView>
-                    </View>
-                </Animated.View>
-            }
+
         </>
     )
 }
@@ -135,23 +92,15 @@ const BoxListView: React.FC<Props> = ({ navigation, user, SelectBox }) => {
 export default connector(BoxListView)
 
 const styles = StyleSheet.create({
-    floatingBtn: {
-        bottom: '5%',
-        left: '5%',
-        borderRadius: 50,
-        flex: 1
-    },
-    firstBox: {
-        marginTop: 30
-    },
-    boxMenu: {
-        ...StyleSheet.absoluteFillObject,
+    sendMsgBtn: {
+        flexDirection: 'row',
+        position: 'absolute',
+        width: '100%',
+        height: 70,
+        bottom: '4%',
+        paddingHorizontal: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(45, 36, 43,0.4)',
-    },
-    boxMenuItems: {
-        paddingHorizontal: 5,
-        paddingVertical: 20,
-    },
+        zIndex: 0
+    }
 })

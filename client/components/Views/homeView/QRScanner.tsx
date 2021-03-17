@@ -33,20 +33,6 @@ const QRScanner: React.FC<Props> = ({ onScan, showCam, onClose }) => {
         })();
     }
 
-    const Scanner = () => {
-
-        return (
-            <View style={{ height: '80%', width: '89%', flex: 0.8 }}>
-                {hasPermission && <BarCodeScanner
-                    type='back'
-                    barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
-                    onBarCodeScanned={scanned ? undefined : handleBarCodeScan}
-                    style={{ flex: 1 }}
-                />}
-            </View>
-        )
-    }
-
 
     const handleBarCodeScan: BarCodeScannedCallback = ({ data }) => {
         const parseData: ScannedBox = JSON.parse(data);
@@ -55,17 +41,23 @@ const QRScanner: React.FC<Props> = ({ onScan, showCam, onClose }) => {
     }
 
     return (
-        <Modal animationType='slide' transparent={true} visible={showCam} onShow={handleOnShown} >
-            <BlurView tint='dark' intensity={50} style={styles.modalContainer}>
-                <View style={styles.modal}>
-                    <View style={{ justifyContent: 'center', alignItems: 'center', flex: 0.15, width: '100%' }}>
-                        <Text style={{ fontSize: 40 }}>Scan QR Code</Text>
-                    </View>
-                    {Scanner()}
-                    <Button title='Back' btnStyle={{ margin: 0, backgroundColor: 'transparent', flex: 0.1 }} onPress={onClose} />
+        <BlurView tint='dark' intensity={50} style={styles.modalContainer}>
+            <View style={styles.modal}>
+                <View style={{ justifyContent: 'center', alignItems: 'center', flex: 0.15, width: '100%' }}>
+                    <Text style={{ fontSize: 40 }}>Scan QR Code</Text>
                 </View>
-            </BlurView>
-        </Modal>
+                <View style={{ height: '80%', width: '89%', flex: 0.8 }}>
+                    {hasPermission &&
+                        <BarCodeScanner
+                            type='back'
+                            barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+                            onBarCodeScanned={scanned ? undefined : handleBarCodeScan}
+                            style={{ flex: 1 }}
+                        />}
+                </View>
+                <Button title='Back' btnStyle={{ margin: 0, backgroundColor: 'transparent', flex: 0.1 }} onPress={onClose} />
+            </View>
+        </BlurView>
     );
 }
 

@@ -48,6 +48,8 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
 
     namespaces.user.on('connection', async (socket: UserSocket) => {
         sockets[socket.user.id] = socket.id;
+        console.log(socket.user.id);
+        
         socket.emit('boxes', socket.user.boxes)
 
         socket.on("getBoxes", async (cb) => {

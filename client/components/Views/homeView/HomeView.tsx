@@ -9,6 +9,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import BoxListView from "./BoxListView"
 import AddBoxView from '../addBoxView/AddBoxView';
 import MessageView from '../messageView';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const mapState = (state: RootState) => ({
     socketState: state.socket
@@ -39,7 +40,8 @@ const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) =
                     screenOptions={{
                         cardStyle: styles.container
                     }}
-                    initialRouteName="BoxList">
+                    initialRouteName="BoxList"
+                    >
                     <Stack.Screen
                         name='BoxList'
                         component={BoxListView}
@@ -57,15 +59,19 @@ const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) =
             )
         case SOCKET_STATE.CONNECTING:
         case SOCKET_STATE.OFFLINE:
-            return <View></View>;
+            return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialIcons size={60} name="error" color="black" />
+                <Text style={{ fontSize: 25, width: '50%', textAlign: 'center', fontWeight: 'bold' }}>
+                    {`Error connecting to server.\nTry again later`}
+                </Text>
+            </View>;
     }
 
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#FFCABE'
+        backgroundColor: '#FEF4EA'
     },
     tabStyling: {
         backgroundColor: '#FFB8D0',

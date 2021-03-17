@@ -5,6 +5,7 @@ import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../homeView/homeViewNav';
 import { SketchCanvas } from './SketchCanvas';
 import { SubmittedScreen } from './SubmittedScreen'
+import BoxListHeader from '../../BoxListHeader';
 
 
 let selectorSize = 50
@@ -25,7 +26,6 @@ type Props = ConnectedProps<typeof connector> & StackNavProp<'SendMessage'>
 const _MessageView: React.FC<Props> = ({ user, route, navigation, socketState: { socket }, RefreshMessages }) => {
     let [sketchSubmitted, setSketchSubmitted] = useState(false);
     let { box } = route.params
-    let [bannerHeight, setBannerHeight] = useState(0);
 
     const submit = () => {
         setSketchSubmitted(true)
@@ -40,13 +40,9 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation, socketState: {
         <View style={styles.container}>
             { !sketchSubmitted &&
                 <>
-                    <View style={styles.header}
-                        onLayout={({ nativeEvent }) => setBannerHeight(nativeEvent.layout.height)}
-                    >
-                        <Text style={styles.headerText}>Sending message to {box.boxName}</Text>
-                    </View>
+                    <BoxListHeader />
                     <View style={styles.body}>
-                        <SketchCanvas height={240} width={320} bannerHeight={bannerHeight} onSubmit={submit} socket={socket!} box={box} />
+                        <SketchCanvas height={240} width={320} onSubmit={submit} socket={socket!} box={box} />
                     </View>
                 </>
             }
@@ -65,7 +61,6 @@ const styles = StyleSheet.create({
     },
     header: {
         paddingTop: StatusBar.currentHeight,
-        backgroundColor: '#485696',
         flex: 1,
         flexDirection: 'row',
         justifyContent: 'center',
@@ -74,7 +69,7 @@ const styles = StyleSheet.create({
     },
     headerText: {
         fontSize: 24,
-        color: '#FEF4EA',
+        color: '#2D242B',
     },
     body: {
         paddingTop: '8%',
