@@ -50,7 +50,6 @@ const BoxListView: React.FC<Props> = ({ navigation, user }) => {
 
     return (
         <>
-            <BoxListHeader />
             {selectedBox && <MessageList selectedBox={selectedBox} messages={messages} />}
             <View style={styles.sendMsgBtn}>
                 {selectedBox &&
@@ -66,6 +65,7 @@ const BoxListView: React.FC<Props> = ({ navigation, user }) => {
                         }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50, elevation: 4 }} />
                 }
             </View>
+            <BoxListHeader />
             <DrawerMenu btns={drawerMenuBtns} />
 
         </>

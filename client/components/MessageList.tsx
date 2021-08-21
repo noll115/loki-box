@@ -102,7 +102,7 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
         </View>
     ))
     return (
-        <ScrollView style={{ paddingTop: 20 }} >
+        <ScrollView style={{ paddingTop: 120, marginTop: StatusBar.currentHeight }} >
             {msgs}
         </ScrollView>
     )

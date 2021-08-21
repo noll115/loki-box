@@ -215,7 +215,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         height: 100,
-        zIndex: -1
     },
     drawerOpenBtn: {
         padding: 5,

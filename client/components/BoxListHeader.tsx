@@ -99,7 +99,7 @@ const BoxListHeader: React.FC<Props> = ({ user, SelectBox }) => {
         let selectBox = () => SelectBox(box);
         return (
             <View key={index}>
-                { !isFirst && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#2d242b' }}></View>}
+                {!isFirst && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#2d242b' }}></View>}
                 <Pressable
                     style={styles.boxMenuItems}
                     onPress={selectBox}>
@@ -155,12 +155,18 @@ const styles = StyleSheet.create({
         paddingTop: StatusBar.currentHeight,
         justifyContent: 'center',
         alignItems: 'center',
-        height: 100
+        position: 'absolute',
+        width: '100%',
+        height: 100,
     },
     boxListTitleText: {
         fontSize: 25,
         fontWeight: 'bold',
         color: '#2D242B',
+        backgroundColor: '#FEF4EA',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 5
     },
     firstBox: {
         marginTop: 30
