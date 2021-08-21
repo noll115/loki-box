@@ -9,7 +9,7 @@ export interface IBox {
 export interface INewBox {
     boxID: string,
     boxName: string,
-    seenAs: string
+    seenAs: string,
 }
 
 export interface IMessageData {

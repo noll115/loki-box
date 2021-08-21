@@ -1,6 +1,5 @@
 import Button from '../../Button';
 import { FontAwesome } from "@expo/vector-icons";
-import QRScanner, { ScannedBox } from './QRScanner';
 import { StyleSheet, View } from 'react-native';
 import React, { useEffect, useState } from 'react'
 import { StackNavProp } from './homeViewNav';
@@ -25,7 +24,6 @@ type Props = ConnectedProps<typeof connector> & StackNavProp<'BoxList'>
 
 
 const BoxListView: React.FC<Props> = ({ navigation, user }) => {
-    const [viewCam, setViewCam] = useState(false);
     const [btnDisabled, setBtnDisabled] = useState(false);
     let { boxes, messages, selectedBox } = user;
     useEffect(() => {
@@ -38,30 +36,17 @@ const BoxListView: React.FC<Props> = ({ navigation, user }) => {
     if (!boxes)
         return null;
 
-    const OnScanBox = (box: ScannedBox) => {
-        console.log(box);
-        setViewCam(false)
-        navigation.navigate('AddBox', {
-            boxID: box.boxID
-        });
-    }
 
-    const OnCloseScanner = () => {
-        setViewCam(false);
-    }
 
 
 
     let drawerMenuBtns = {
         'Add a box':
         {
-            fn: () => setViewCam(true),
+            fn: () => navigation.push('AddBox'),
             icon: () => <FontAwesome name="plus" size={35} color="#171216" />
         }
     }
-
-
-
 
     return (
         <>
@@ -81,7 +66,6 @@ const BoxListView: React.FC<Props> = ({ navigation, user }) => {
                         }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50, elevation: 4 }} />
                 }
             </View>
-            <QRScanner onScan={OnScanBox} showCam={viewCam} onClose={OnCloseScanner} />
             <DrawerMenu btns={drawerMenuBtns} />
 
         </>

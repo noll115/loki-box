@@ -1,24 +1,13 @@
 import { createStackNavigator, StackNavigationOptions } from '@react-navigation/stack';
-import React from 'react'
+import React, { Reducer, useReducer, useState } from 'react'
 import { Easing, Animated } from 'react-native';
 import { connect, ConnectedProps } from 'react-redux';
 import { RootState } from "../../../redux"
+import { INewBox } from '../../../types/general';
 import { StackNavProp } from '../homeView/homeViewNav';
-import { AddBoxViewParamList } from './addBoxViewNav';
-import Prompt from './Prompt';
-
-
-
-
-const mapState = (state: RootState) => ({
-    socketState: state.socket
-})
-
-const mapDispatch = {
-}
-
-const connector = connect(mapState, mapDispatch);
-type Props = ConnectedProps<typeof connector> & StackNavProp<'AddBox'>
+import QRScanner from '../homeView/QRScanner';
+import { AddBoxViewParamList, NewBoxContext } from './addBoxViewNav';
+import { NamePrompt, SeenAs, Submit } from './Prompt';
 
 
 
@@ -41,6 +30,7 @@ const opts: StackNavigationOptions = {
 
 
 const Stack = createStackNavigator<AddBoxViewParamList>();
+
 const screenOpts: StackNavigationOptions = {
     cardStyle: {
         backgroundColor: 'transparent',
@@ -65,40 +55,55 @@ const screenOpts: StackNavigationOptions = {
     }
 }
 
-const AddBoxView: React.FC<Props> = ({ route, socketState: { socket } }) => {
-    let boxInfo = route.params;
+
+
+
+
+
+const mapState = (state: RootState) => ({
+    socketState: state.socket
+})
+
+const mapDispatch = {
+}
+
+const connector = connect(mapState, mapDispatch);
+type Props = ConnectedProps<typeof connector> & StackNavProp<'AddBox'>
+
+
+const AddBoxView: React.FC<Props> = ({ socketState: { socket } }) => {
+    const [newBoxInfo, changeBoxInfo] = useState<INewBox>({ boxID: '', seenAs: '', boxName: '' });
+    const changeInfo = (newBoxInfo: Partial<INewBox>) => {
+        changeBoxInfo(prevState => ({ ...prevState, ...newBoxInfo }));
+    }
     return (
-        <Stack.Navigator
-            headerMode='none'
-            screenOptions={screenOpts}
-        >
-            <Stack.Screen
-                name='boxName'
-                options={opts}
-                initialParams={{
-                    inputTitle: `Who is this box for?`,
-                    boxID: boxInfo.boxID,
-                    boxName: '',
-                    seenAs: '',
-                    nextPrompt: 'seenAs'
-                }}
-                component={Prompt('boxName')}
-            />
-            <Stack.Screen
-                name='seenAs'
-                options={opts}
-                initialParams={{
-                    inputTitle: `Whats the name you want to be seen as?`,
-                    nextPrompt: 'submit'
-                }}
-                component={Prompt('seenAs')}
-            />
-            <Stack.Screen
-                name='submit'
-                options={opts}
-                component={Prompt('submit', socket!)}
-            />
-        </Stack.Navigator >
+        <NewBoxContext.Provider value={{ newBoxInfo, changeBoxInfo: changeInfo }}>
+            <Stack.Navigator
+                headerMode='none'
+                screenOptions={screenOpts}
+            >
+                <Stack.Screen
+                    name='qrScreen'
+                    options={opts}
+                    component={QRScanner}
+                />
+                <Stack.Screen
+                    name='boxName'
+                    options={opts}
+                    component={NamePrompt}
+                />
+                <Stack.Screen
+                    name='seenAs'
+                    options={opts}
+                    component={SeenAs}
+                />
+                <Stack.Screen
+                    name='submit'
+                    options={opts}>
+                    {(props) => <Submit {...props} socket={socket!} />}
+                </Stack.Screen>
+            </Stack.Navigator >
+        </NewBoxContext.Provider>
     )
 
 }

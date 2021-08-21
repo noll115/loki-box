@@ -1,26 +1,11 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext } from 'react'
 import { StyleSheet, View, Text, TextInput } from 'react-native';
 import { Socket } from 'socket.io-client';
 import validator from 'validator';
-import { INewBox } from '../../../types/general';
 import Button from '../../Button';
-import { AddBoxViewParamList, AddBoxViewStackProp, IRouteParams } from './addBoxViewNav';
+import { AddBoxViewStackProp, IContextProp, NewBoxContext } from './addBoxViewNav';
 
 
-
-type Props = {
-
-}
-
-const nextRoute: { [x in keyof Omit<AddBoxViewParamList, 'submit'>]: keyof AddBoxViewParamList } = {
-    boxName: 'seenAs',
-    seenAs: 'submit'
-}
-
-
-
-type PromptType = (typeOfPrompt: keyof AddBoxViewParamList, socket?: Socket) => React.FC<Props & AddBoxViewStackProp<typeof typeOfPrompt>>
 
 
 
@@ -28,81 +13,85 @@ const validateInput = (input: string): boolean => {
     return validator.matches(input, /^[a-zA-Z\-\s]+$/) && validator.isLength(input, { max: 20, min: 1 })
 }
 
-const Prompt: PromptType = (typeOfPrompt, socket) => {
-    if (typeOfPrompt === 'submit') {
-        return ({ navigation, route }) => {
-            const nav = useNavigation();
+const NamePrompt: React.FC<AddBoxViewStackProp<'boxName'>> = ({ navigation }) => {
 
-            useEffect(() => {
-                let unsub = navigation.addListener('beforeRemove', async () => {
-                    let { boxID, boxName, seenAs } = route.params;
-
-                    let newBox: INewBox = {
-                        boxID,
-                        boxName,
-                        seenAs
-                    }
-                    socket?.emit('registerBox', newBox, (res) => {
-                        console.log(newBox);
-                        console.log(res);
-                    })
-                })
-                return unsub;
-            }, [navigation, socket])
-            let { boxName, seenAs } = route.params;
-            return (
-                <View style={styles.container}>
-                    <View style={styles.inputPromptContainer}>
-                        <View style={styles.inputPrompt}>
-                            <Text style={{ fontSize: 20 }}>
-                                This is for: <Text style={{ fontWeight: 'bold' }}>{boxName}</Text>
-                            </Text>
-                            <Text style={{ fontSize: 20, paddingTop: 30 }}>
-                                I want to be seen as: <Text style={{ fontWeight: 'bold' }}>{seenAs}</Text>
-                            </Text>
-                        </View>
-                        <Button title='Add Box' onPress={() => nav.navigate("BoxList")} />
-                    </View>
-                </View>
-            )
-        };
+    const handleOnPress = () => {
+        navigation.push('seenAs');
     }
-    return ({ navigation, route }) => {
-        let { inputTitle, nextPrompt, ...boxInfo } = route.params as IRouteParams;
-        const [text, setText] = useState(boxInfo[typeOfPrompt]);
-        const inputRef = useRef<TextInput>(null);
-        useEffect(() => {
-            inputRef.current?.focus();
-        }, [inputRef])
 
-        const handleOnPress = () => {
-            if (validateInput(text))
-                navigation.push(nextPrompt, {
-                    ...boxInfo,
-                    boxID: boxInfo.boxID,
-                    [typeOfPrompt]: text,
-                })
-        }
-
-        return (
-            <View style={styles.container}>
-                <View style={styles.inputPromptContainer}>
-                    <View style={styles.inputPrompt}>
-                        <Text style={{ fontSize: 20 }}>{inputTitle}</Text>
-                        <TextInput
-                            maxLength={20}
-                            ref={inputRef}
-                            value={text}
-                            onChangeText={txt => { setText(txt) }}
-                            style={{ fontSize: 25, borderBottomWidth: StyleSheet.hairlineWidth, paddingTop: 10 }}
-                        />
-                    </View>
-                    <Button title='Next' onPress={handleOnPress} />
+    const { newBoxInfo, changeBoxInfo } = useContext(NewBoxContext) as IContextProp;
+    return (
+        <View style={styles.container}>
+            <View style={styles.inputPromptContainer}>
+                <View style={styles.inputPrompt}>
+                    <Text style={{ fontSize: 20 }}>What is the box's name?</Text>
+                    <TextInput
+                        maxLength={20}
+                        value={newBoxInfo?.boxName}
+                        onChangeText={txt => {
+                            changeBoxInfo({ boxName: txt });
+                        }}
+                        style={{ fontSize: 25, borderBottomWidth: StyleSheet.hairlineWidth, paddingTop: 10 }}
+                    />
                 </View>
+                <Button title='Next' onPress={handleOnPress} />
             </View>
-        )
-    }
+        </View>
+    )
 }
+
+
+const SeenAs: React.FC<AddBoxViewStackProp<'seenAs'>> = ({ navigation }) => {
+    const { newBoxInfo, changeBoxInfo } = useContext(NewBoxContext) as IContextProp;
+    const handleOnPress = () => {
+        navigation.push('submit');
+    }
+    return (
+        <View style={styles.container}>
+            <View style={styles.inputPromptContainer}>
+                <View style={styles.inputPrompt}>
+                    <Text style={{ fontSize: 20 }}>What name do you want to be seen as?</Text>
+                    <TextInput
+                        maxLength={20}
+                        value={newBoxInfo.seenAs}
+                        onChangeText={txt => {
+                            changeBoxInfo({ seenAs: txt });
+                        }}
+                        style={{ fontSize: 25, borderBottomWidth: StyleSheet.hairlineWidth, paddingTop: 10 }}
+                    />
+                </View>
+                <Button title='Next' onPress={handleOnPress} />
+            </View>
+        </View>
+    )
+}
+
+type Props = {
+    socket: Socket
+}
+
+const Submit: React.FC<Props & AddBoxViewStackProp<'submit'>> = ({ navigation, socket }) => {
+    const { newBoxInfo } = useContext(NewBoxContext) as IContextProp;
+    const handleOnPress = () => {
+        socket.emit('registerBox', newBoxInfo, (res) => {
+            if (res.status === 'ok') {
+                navigation.popToTop();
+            }
+        })
+    }
+    return (
+        <View style={styles.container}>
+            <View style={styles.inputPromptContainer}>
+                <View style={styles.inputPrompt}>
+                    <Text style={{ fontSize: 20 }}>Box's name: {newBoxInfo.boxName}</Text>
+                    <Text style={{ fontSize: 20 }}>They will see you as: {newBoxInfo.seenAs}</Text>
+                </View>
+                <Button title='Add Box' onPress={handleOnPress} />
+            </View>
+        </View>
+    )
+}
+
 
 
 const styles = StyleSheet.create({
@@ -132,4 +121,4 @@ const styles = StyleSheet.create({
 
 })
 
-export default Prompt;
+export { NamePrompt, SeenAs, Submit };

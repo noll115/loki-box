@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useReducer, } from "react";
 import { StyleSheet, useWindowDimensions, View, Text } from "react-native";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
-import Animated, { and, block, call, Clock, cond, Easing, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import Animated, { and, block, call, Clock, clockRunning, cond, debug, Easing, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
 import { Path, Svg, Text as SVGText } from 'react-native-svg'
 import { Canvasbtns } from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
@@ -77,7 +77,7 @@ let canvasReducer = (prevState: SketchState, action: ReducerActions): SketchStat
     }
 }
 
-function animateOpacity(clock: Clock, shouldAnim: Animated.Value<number>) {
+function animateOpacity(clock: Clock) {
     const state = {
         finished: new Animated.Value(0),
         position: new Animated.Value(0),
@@ -93,8 +93,8 @@ function animateOpacity(clock: Clock, shouldAnim: Animated.Value<number>) {
 
     return block([
         cond(
-            eq(shouldAnim, 1),
-            startClock(clock),
+            not(clockRunning(clock)),
+            startClock(clock)
         ),
         timing(clock, state, config),
         cond(state.finished,
@@ -104,9 +104,8 @@ function animateOpacity(clock: Clock, shouldAnim: Animated.Value<number>) {
     ])
 }
 
-function heartAnim(clock: Clock, shouldAnim: Animated.Value<number>) {
+function heartAnim(clock: Clock, animState: Animated.Value<number>) {
 
-    let pulseVal = useValue<0 | 1>(0);
 
     const state = {
         finished: new Animated.Value(0),
@@ -120,55 +119,42 @@ function heartAnim(clock: Clock, shouldAnim: Animated.Value<number>) {
         toValue: new Animated.Value(1),
         easing: Easing.inOut(Easing.ease),
     };
-    let shouldPulse = eq(shouldAnim, 1);
-    let fillScreen = eq(shouldAnim, 2)
+    let shouldFillScreen = eq(animState, 1)
     let pulse = block([
-        set(pulseVal, not(pulseVal)),
         cond(
-            eq(pulseVal, 1),
-            [
-                set(state.finished, 0),
-                set(state.frameTime, 0),
-                set(state.time, 0),
-                set(config.toValue, 0),
-            ]
+            eq(config.toValue, 1),
+            set(config.toValue, 0),
+            set(config.toValue, 1),
         ),
-        cond(
-            eq(pulseVal, 0),
-            [
-                set(state.finished, 0),
-                set(state.frameTime, 0),
-                set(state.time, 0),
-                set(config.toValue, 1),
-            ]
-        ),
+        set(state.finished, 0),
+        set(state.frameTime, 0),
+        set(state.time, 0),
+    ]);
+    let fillScreen = block([
+        set(state.finished, 0),
+        set(state.time, 0),
+        set(state.frameTime, 0),
+        set(config.duration, 500),
+        set(config.toValue, 2),
     ])
 
     return block([
         cond(
-            shouldPulse,
+            not(clockRunning(clock)),
             startClock(clock)
         ),
-
         timing(clock, state, config),
         cond(state.finished, [
             cond(
-                shouldPulse,
+                not(shouldFillScreen),
                 pulse,
-            ),
-            cond(
-                and(fillScreen, neq(config.toValue, 2)),
-                [
-                    set(state.finished, 0),
-                    set(state.time, 0),
-                    set(state.frameTime, 0),
-                    set(config.toValue, 2),
-                    startClock(clock)
-                ],
-                cond(and(fillScreen, eq(state.position, 2)),
-                    stopClock(clock)
-                )
-            ),
+                cond(
+                    neq(config.toValue, 2),
+                    fillScreen,
+                ),
+            )
+
+
         ]),
         state.position
     ]);
@@ -190,11 +176,11 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
     const window = useWindowDimensions()
     let submitting = state.canvasState === CanvasState.SUBMITTING;
 
-    let animateHeart = useValue<number>(0);
+    let animState = useValue<number>(0);
     let clock1 = new Clock();
     let clock2 = new Clock();
-    let scaleAnim = heartAnim(clock1, animateHeart)
-    let opacityAnim = animateOpacity(clock2, animateHeart);
+    let scaleAnim = heartAnim(clock1, animState)
+    let opacityAnim = animateOpacity(clock2);
 
     useEffect(() => {
         let scale = (window.width - 20) / width;
@@ -203,7 +189,6 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
 
     useEffect(() => {
         if (state.canvasState === CanvasState.SUBMITTING) {
-            animateHeart.setValue(1);
             let msgData: IMessageData = {
                 texts: state.texts,
                 lines: state.lines
@@ -215,10 +200,10 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
                 console.log(resp);
 
                 if (resp.status === 'ok') {
-                    return animateHeart.setValue(2);
+                    return animState.setValue(1);
                 }
                 dispatch({ type: CanvasActions.SET_STATE, state: CanvasState.EDITING })
-                animateHeart.setValue(0);
+                animState.setValue(0);
             })
         }
     }, [state.canvasState])

@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { StyleSheet, TouchableOpacity, Text, StyleProp, ViewStyle, TextStyle, View } from 'react-native';
+import React from 'react'
+import { StyleSheet, Text, StyleProp, ViewStyle, TextStyle, View, Pressable } from 'react-native';
 
 
 interface Props {
@@ -16,9 +16,9 @@ interface Props {
 
 const Button: React.FC<Props> = ({ btnStyle, textStyle, onPress, title, isDisabled, icon, enableShadow }) => {
     return (
-        <TouchableOpacity onPress={onPress} style={[styles.button, btnStyle, isDisabled && styles.btnDisabled, enableShadow && styles.btnShadow]} disabled={isDisabled}>
+        <Pressable android_ripple={{  color: '#FFB8D0', borderless: false }} onPress={onPress} style={[styles.button, btnStyle, isDisabled && styles.btnDisabled, enableShadow && styles.btnShadow]} disabled={isDisabled}>
             <Text style={[styles.btnText, textStyle]}>{title}</Text>{icon && <View style={{ marginLeft: 9 }}>{icon}</View>}
-        </TouchableOpacity>
+        </Pressable>
     );
 }
 
