@@ -1,6 +1,6 @@
 import { AntDesign } from "@expo/vector-icons";
 import React, { useRef } from "react";
-import Animated, { block, Clock, clockRunning, cond, debug, Easing, eq, interpolate, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import Animated, { block, Clock, clockRunning, cond, debug, EasingNode, eq, interpolateNode, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
 
 
 const scaleAnim = (clock: Clock) => {
@@ -14,7 +14,7 @@ const scaleAnim = (clock: Clock) => {
     const config = {
         duration: 1000,
         toValue: new Animated.Value(1),
-        easing: Easing.inOut(Easing.ease),
+        easing: EasingNode.inOut(EasingNode.ease),
     };
 
     return block([
@@ -57,7 +57,7 @@ export const LoadingHeart: React.FC = () => {
     return (
         <Animated.View style={{
             transform: [{
-                scale: interpolate(scale, {
+                scale: interpolateNode(scale, {
                     inputRange: [0, 1],
                     outputRange: [1, 2]
                 })

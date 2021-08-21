@@ -11,7 +11,7 @@ const char *const SEEN_MSG = "seenMsg";
 const char *const CHECK_FOR_MSG = "checkForMsg";
 const char *const GOT_NEW_MSG = "gotNewMsg";
 const char *const GET_MSG = "getMsg";
-const char *const URL = "192.168.1.2";
+const char *const URL = "192.168.1.10";
 const char *const TOKEN = "cutie";
 const char *const ID = "6010b0545bf32741e1a33c85";
 
@@ -274,12 +274,9 @@ class BoxSocket {
     shownQRCode = true;
     QRCode qrcode;
     uint8 qrcodeBytes[qrcode_getBufferSize(4)];
-    String data("{boxID:\"");
-    data += ID;
-    data += "\"}";
     uint boxSize = 7;
     tft.fillScreen(TFT_BLACK);
-    qrcode_initText(&qrcode, qrcodeBytes, 4, ECC_HIGH, data.c_str());
+    qrcode_initText(&qrcode, qrcodeBytes, 4, ECC_HIGH, ID);
     for (size_t y = 0; y < qrcode.size; y++) {
       for (size_t x = 0; x < qrcode.size; x++) {
         if (qrcode_getModule(&qrcode, x, y)) {

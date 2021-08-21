@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-
 import React, { useEffect, useState } from 'react'
 import { RootState, SelectBox } from '../redux';
 import { connect, ConnectedProps } from 'react-redux';
-import Animated, { and, block, call, Clock, cond, debug, Easing, eq, neq, not, set, startClock, stopClock, timing, useValue } from 'react-native-reanimated'
+import Animated, { and, block, call, Clock, cond, debug, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useValue } from 'react-native-reanimated'
 
 
 
@@ -18,7 +18,7 @@ function fadeAnim(clock: Clock, shouldFade: Animated.Value<0 | 1>, closeBoxList:
     const config = {
         duration: 250,
         toValue: new Animated.Value(0),
-        easing: Easing.inOut(Easing.ease),
+        easing: EasingNode.inOut(EasingNode.ease),
     };
 
     return block([

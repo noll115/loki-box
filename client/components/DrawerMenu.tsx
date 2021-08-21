@@ -1,7 +1,7 @@
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { AntDesign, Feather, FontAwesome } from "@expo/vector-icons";
 import { StatusBar, StyleSheet, Text, View, Dimensions, Pressable } from 'react-native';
-import Animated, { and, block, call, Clock, cond, debug, Easing, interpolate, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import Animated, { and, block, call, Clock, cond, debug, EasingNode, interpolateNode, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
 import React, { useEffect, useState } from 'react'
 import { RootState, Logout } from '../redux';
 import { connect, ConnectedProps } from 'react-redux';
@@ -27,7 +27,7 @@ function slideAnim(clock: Clock, open: Animated.Value<0 | 1>, closeDrawer: () =>
     const config = {
         duration: 250,
         toValue: new Animated.Value(0),
-        easing: Easing.inOut(Easing.ease),
+        easing: EasingNode.inOut(EasingNode.ease),
     };
 
     return block([
@@ -121,7 +121,7 @@ const DrawerMenu: React.FC<Props> = ({ user, btns, Logout }) => {
             >
                 <Animated.View style={[styles.drawer, {
                     transform: [{
-                        translateX: interpolate(slideAnimation, {
+                        translateX: interpolateNode(slideAnimation, {
                             inputRange: [0, 1],
                             outputRange: [-windowWidth, 0]
                         })

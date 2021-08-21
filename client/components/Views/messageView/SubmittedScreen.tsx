@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { Easing, block, Clock, timing, eq, startClock, cond, stopClock } from 'react-native-reanimated';
+import Animated, { EasingNode, block, Clock, timing, eq, startClock, cond, stopClock } from 'react-native-reanimated';
 
 function ShowAnim(clock: Clock) {
 
@@ -15,7 +15,7 @@ function ShowAnim(clock: Clock) {
     const config = {
         duration: new Animated.Value(1000),
         toValue: new Animated.Value(1),
-        easing: Easing.inOut(Easing.ease),
+        easing: EasingNode.inOut(EasingNode.ease),
     };
 
 
@@ -41,7 +41,7 @@ export const SubmittedScreen: React.FC<{ onPress(): void }> = ({ onPress }) => {
             <Animated.View style={{ height: '50%' }}>
                 <Animated.View style={[style.textContainer, {
                     opacity: showVal, transform: [{
-                        translateY: Animated.interpolate(showVal, {
+                        translateY: Animated.interpolateNode(showVal, {
                             inputRange: [0, 1],
                             outputRange: [100, 0]
                         })
@@ -51,12 +51,12 @@ export const SubmittedScreen: React.FC<{ onPress(): void }> = ({ onPress }) => {
                 </Animated.View>
                 <Animated.View style={[style.btnContainer, {
                     transform: [{
-                        translateY: Animated.interpolate(showVal, {
+                        translateY: Animated.interpolateNode(showVal, {
                             inputRange: [0, 0.5, 1],
                             outputRange: [100, 100, 0]
                         })
                     }],
-                    opacity: Animated.interpolate(showVal, {
+                    opacity: Animated.interpolateNode(showVal, {
                         inputRange: [0, 0.5, 1],
                         outputRange: [0, 0, 1]
                     })

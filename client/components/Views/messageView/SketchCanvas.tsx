@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useReducer, } from "react";
 import { StyleSheet, useWindowDimensions, View, Text } from "react-native";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
-import Animated, { and, block, call, Clock, clockRunning, cond, debug, Easing, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import Animated, { and, block, call, Clock, clockRunning, cond, debug, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
 import { Path, Svg, Text as SVGText } from 'react-native-svg'
 import { Canvasbtns } from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
@@ -88,7 +88,7 @@ function animateOpacity(clock: Clock) {
     const config = {
         duration: new Animated.Value(250),
         toValue: new Animated.Value(1),
-        easing: Easing.inOut(Easing.ease),
+        easing: EasingNode.inOut(EasingNode.ease),
     };
 
     return block([
@@ -117,7 +117,7 @@ function heartAnim(clock: Clock, animState: Animated.Value<number>) {
     const config = {
         duration: new Animated.Value(1000),
         toValue: new Animated.Value(1),
-        easing: Easing.inOut(Easing.ease),
+        easing: EasingNode.inOut(EasingNode.ease),
     };
     let shouldFillScreen = eq(animState, 1)
     let pulse = block([
@@ -285,7 +285,7 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
         onSubmit();
     }
 
-    let heartScale = Animated.interpolate(scaleAnim, {
+    let heartScale = Animated.interpolateNode(scaleAnim, {
         inputRange: [0, 1, 2],
         outputRange: [1, 1.3, 20]
     });

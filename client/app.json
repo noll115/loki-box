@@ -22,9 +22,11 @@
     },
     "android": {
       "softwareKeyboardLayoutMode": "pan",
+      "jsEngine": "hermes",
       "permissions": [
         "CAMERA"
-      ]
+      ],
+      "package": "loki.box"
     },
     "web": {
       "favicon": "./assets/favicon.png"
