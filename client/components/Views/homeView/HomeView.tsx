@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { StyleSheet, Text, View } from 'react-native';
 import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../../../types/navigation';
-import { ConnectSocket, RootState } from "../../../redux"
+import { ConnectSocket, RootState,Logout } from "../../../redux"
 import { SOCKET_STATE } from '../../../types/redux';
 import { HomeViewTabParamList } from './homeViewNav';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -17,6 +17,7 @@ const mapState = (state: RootState) => ({
 
 const mapDispatch = {
     ConnectSocket,
+    Logout
 }
 
 const connector = connect(mapState, mapDispatch);
@@ -26,7 +27,7 @@ type Props = ConnectedProps<typeof connector> & StackNavProp<'Home'>
 const Stack = createStackNavigator<HomeViewTabParamList>();
 
 
-const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) => {
+const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket,Logout }) => {
 
     useEffect(() => {
         ConnectSocket()
@@ -41,7 +42,7 @@ const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) =
                         cardStyle: styles.container
                     }}
                     initialRouteName="BoxList"
-                    >
+                >
                     <Stack.Screen
                         name='BoxList'
                         component={BoxListView}
@@ -58,13 +59,20 @@ const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) =
                 </Stack.Navigator>
             )
         case SOCKET_STATE.CONNECTING:
+            return (
+                <View>
+                    <Text>Connecting</Text>
+                </View>
+            )
         case SOCKET_STATE.OFFLINE:
-            return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialIcons size={60} name="error" color="black" />
-                <Text style={{ fontSize: 25, width: '50%', textAlign: 'center', fontWeight: 'bold' }}>
-                    {`Error connecting to server.\nTry again later`}
-                </Text>
-            </View>;
+            return (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialIcons size={60} name="error" color="black" />
+                    <Text style={{ fontSize: 25, width: '50%', textAlign: 'center', fontWeight: 'bold' }}>
+                        {`Error connecting to server.\nTry again later`}
+                    </Text>
+                </View>
+            );
     }
 
 }

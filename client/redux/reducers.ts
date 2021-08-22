@@ -37,7 +37,7 @@ const UserReducer = (state = INIT_USER_STATE, action: UserActions): UserState =>
         case UserActionTypes.UPDATE_BOXES:
             let { payload: { boxes, messages, selectedBox } } = action;
             return {
-                messages: selectedBox ? { [selectedBox.box]: messages! } : { ...state.messages },
+                messages: selectedBox ? { [selectedBox.boxID]: messages! } : { ...state.messages },
                 boxes: action.payload.boxes,
                 selectedBox: action.payload.selectedBox || state.selectedBox
             }
@@ -45,7 +45,7 @@ const UserReducer = (state = INIT_USER_STATE, action: UserActions): UserState =>
             return {
                 messages: {
                     ...state.messages,
-                    [action.payload.box.box]: action.payload.messages
+                    [action.payload.box.boxID]: action.payload.messages
                 },
                 boxes: [...state.boxes!], selectedBox: state.selectedBox
             }

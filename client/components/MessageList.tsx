@@ -78,7 +78,7 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
     if (!selectedBox) {
         return null;
     }
-    let selectedBoxMessages = messages[selectedBox.box];
+    let selectedBoxMessages = messages[selectedBox.boxID];
     const prevMessages = useRef<IMessage[]>(selectedBoxMessages);
 
     useEffect(() => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useReducer, } from "react";
 import { StyleSheet, useWindowDimensions, View, Text } from "react-native";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
-import Animated, { and, block, call, Clock, clockRunning, cond, debug, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import Animated, { and, block, call, Clock, clockRunning, cond, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
 import { Path, Svg, Text as SVGText } from 'react-native-svg'
 import { Canvasbtns } from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
@@ -193,10 +193,8 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
                 texts: state.texts,
                 lines: state.lines
             }
-            console.log(msgData);
 
-
-            socket.emit('sendMsg', box.box, msgData, resp => {
+            socket.emit('sendMsg', box.boxID, msgData, resp => {
                 console.log(resp);
 
                 if (resp.status === 'ok') {

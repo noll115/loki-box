@@ -31,13 +31,10 @@ const QRScanner: React.FC<AddBoxViewStackProp<'qrScreen'>> = ({ navigation }) =>
     }, [])
 
 
-    const handleBarCodeScan: BarCodeScannedCallback = ({ data }) => {
-        const ID = data;
-        if (ID) {
-            setScanned(true);
-            changeBoxInfo({ boxID: ID });
-            navigation.push('boxName');
-        }
+    const handleBarCodeScan: BarCodeScannedCallback = ({ data: ID }) => {
+        setScanned(true);
+        changeBoxInfo({ boxID: ID });
+        navigation.push('boxName');
     }
     return (
         <View style={styles.modal}>

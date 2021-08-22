@@ -93,7 +93,7 @@ const BoxListHeader: React.FC<Props> = ({ user, SelectBox }) => {
 
     let menuItems = boxes.map((box, index) => {
         let isFirst = index === 0;
-        if (box.box === selectedBox?.box) {
+        if (box.boxID === selectedBox?.boxID) {
             return null;
         }
         let selectBox = () => SelectBox(box);
@@ -120,13 +120,15 @@ const BoxListHeader: React.FC<Props> = ({ user, SelectBox }) => {
 
     return (
         <>
-            <View style={styles.boxListTitle}>
+            <View style={styles.boxListTitleContainer}>
                 <View style={{ justifyContent: 'center', alignItems: 'center' }}>
                     <Pressable style={{ flexDirection: 'row', alignItems: 'center' }} onPress={hasBoxes ? showBoxList : undefined}>
-                        <Text style={styles.boxListTitleText}>
-                            {selectedBox ? selectedBox.boxName : "Add a Box!"}
-                        </Text>
-                        {hasBoxes && <AntDesign name="caretdown" size={20} style={{ marginLeft: 10 }} color="#2D242B" />}
+                        <View style={styles.boxListTitle}>
+                            <Text style={styles.boxListTitleText}>
+                                {selectedBox ? selectedBox.boxName : "Add a Box!"}
+                            </Text>
+                            {hasBoxes && <AntDesign name="caretdown" size={20} style={{ marginLeft: 5 }} color="#2D242B" />}
+                        </View>
                     </Pressable>
                 </View>
             </View>
@@ -151,7 +153,7 @@ const BoxListHeader: React.FC<Props> = ({ user, SelectBox }) => {
 export default connector(BoxListHeader)
 
 const styles = StyleSheet.create({
-    boxListTitle: {
+    boxListTitleContainer: {
         paddingTop: StatusBar.currentHeight,
         justifyContent: 'center',
         alignItems: 'center',
@@ -159,14 +161,19 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 100,
     },
+    boxListTitle: {
+        backgroundColor: '#FEF4EA',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 5,
+        alignItems:'center',
+        justifyContent:'center',
+        flexDirection:'row'
+    },
     boxListTitleText: {
         fontSize: 25,
         fontWeight: 'bold',
         color: '#2D242B',
-        backgroundColor: '#FEF4EA',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 5
     },
     firstBox: {
         marginTop: 30

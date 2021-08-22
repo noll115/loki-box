@@ -111,11 +111,11 @@ const DrawerMenu: React.FC<Props> = ({ user, btns, Logout }) => {
 
     return (
         <>
-            <View style={styles.drawerOpenContainer}>
+            {!drawerOpen && <View style={styles.drawerOpenContainer}>
                 <Pressable style={styles.drawerOpenBtn} onPress={() => setDrawerOpen(true)} >
                     <AntDesign name={'menu-fold'} size={27} style={{ color: "#2D242B" }} />
                 </Pressable>
-            </View>
+            </View>}
             {drawerOpen && <Animated.View
                 style={[styles.drawerContainer, { opacity: slideAnimation }]}
             >

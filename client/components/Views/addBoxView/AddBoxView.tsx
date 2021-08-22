@@ -3,7 +3,7 @@ import React, { Reducer, useReducer, useState } from 'react'
 import { Easing, Animated } from 'react-native';
 import { connect, ConnectedProps } from 'react-redux';
 import { RootState } from "../../../redux"
-import { INewBox } from '../../../types/general';
+import { IBox } from '../../../types/general';
 import { StackNavProp } from '../homeView/homeViewNav';
 import QRScanner from '../homeView/QRScanner';
 import { AddBoxViewParamList, NewBoxContext } from './addBoxViewNav';
@@ -72,8 +72,8 @@ type Props = ConnectedProps<typeof connector> & StackNavProp<'AddBox'>
 
 
 const AddBoxView: React.FC<Props> = ({ socketState: { socket } }) => {
-    const [newBoxInfo, changeBoxInfo] = useState<INewBox>({ boxID: '', seenAs: '', boxName: '' });
-    const changeInfo = (newBoxInfo: Partial<INewBox>) => {
+    const [newBoxInfo, changeBoxInfo] = useState<IBox>({ boxID: '', seenAs: '', boxName: '' });
+    const changeInfo = (newBoxInfo: Partial<IBox>) => {
         changeBoxInfo(prevState => ({ ...prevState, ...newBoxInfo }));
     }
     return (
