@@ -20,7 +20,7 @@ export class UserBoxesClass {
     public seenAs!: string
 
     @prop({ ref: () => BoxClass })
-    public box!: Ref<BoxClass>
+    public boxID!: Ref<BoxClass>
 }
 
 
@@ -54,8 +54,8 @@ export class UserClass {
     }
     public getBox(this: DocumentType<UserClass>, id: string) {
         let box = this.boxes!.find(userBox => {
-            if (isRefType(userBox.box)) {
-                return userBox.box.toHexString() === id;
+            if (isRefType(userBox.boxID)) {
+                return userBox.boxID.toHexString() === id;
             }
         }) || null;
         return box;

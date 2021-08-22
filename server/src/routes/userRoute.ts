@@ -30,7 +30,7 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
         passport.authenticate("login", { session: false }, (err, user, opt: IVerifyOptions) => {
 
             if (err) return next(err);
-            if (opt) return next(new HttpException(422, opt.message));
+            if (opt) return next(new HttpException(401, opt.message));
             req.currentUser = user;
 
             next();
@@ -70,7 +70,7 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
 
                 if (box) {
                     const newBox: UserBoxesClass = {
-                        box: box.id,
+                        boxID: box.id,
                         boxName: newBoxInfo.boxName,
                         seenAs: newBoxInfo.seenAs
                     }
