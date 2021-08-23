@@ -75,7 +75,7 @@ const Submit: React.FC<Props & AddBoxViewStackProp<'submit'>> = ({ navigation, s
     const handleOnPress = () => {
         socket.emit('registerBox', newBoxInfo, (res) => {
             if (res.status === 'ok') {
-                navigation.navigate('BoxList');
+                navigation.navigate('BoxMessages');
             }
         })
     }

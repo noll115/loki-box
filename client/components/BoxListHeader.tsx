@@ -7,54 +7,7 @@ import Animated, { and, block, call, Clock, cond, debug, EasingNode, eq, neq, no
 
 
 
-function fadeAnim(clock: Clock, shouldFade: Animated.Value<0 | 1>, closeBoxList: () => void) {
-    const state = {
-        finished: new Animated.Value(0),
-        position: new Animated.Value(0),
-        time: new Animated.Value(0),
-        frameTime: new Animated.Value(0),
-    };
 
-    const config = {
-        duration: 250,
-        toValue: new Animated.Value(0),
-        easing: EasingNode.inOut(EasingNode.ease),
-    };
-
-    return block([
-        cond(
-            and(eq(shouldFade, 1), neq(config.toValue, 1)),
-            [
-                set(config.toValue, 1),
-                set(state.finished, 0),
-                set(state.time, 0),
-                set(state.frameTime, 0),
-                startClock(clock)
-            ]
-        ),
-        cond(
-            and(eq(shouldFade, 0), neq(config.toValue, 0)),
-            [
-                set(config.toValue, 0),
-                set(state.finished, 0),
-                set(state.time, 0),
-                set(state.frameTime, 0),
-                startClock(clock)
-            ]
-        ),
-        timing(clock, state, config),
-        cond(state.finished,
-            [
-                stopClock(clock),
-                cond(
-                    not(config.toValue),
-                    call([], closeBoxList)
-                )
-            ],
-        ),
-        state.position
-    ])
-}
 
 const mapState = (state: RootState) => ({
     user: state.user,
@@ -66,63 +19,24 @@ const mapDispatch = {
 
 const connector = connect(mapState, mapDispatch);
 
-type Props = {} & ConnectedProps<typeof connector>
+type Props = { ShowBoxList: () => void } & ConnectedProps<typeof connector>
 
 
-const BoxListHeader: React.FC<Props> = ({ user, SelectBox }) => {
+const BoxListHeader: React.FC<Props> = ({ user, ShowBoxList }) => {
     let { boxes, selectedBox } = user;
-    const [boxListOpen, setBoxListOpen] = useState(false);
-    const shouldFade = useValue<0 | 1>(0);
-
-    useEffect(() => {
-        if (boxListOpen)
-            shouldFade.setValue(1);
-    }, [boxListOpen]);
-
-
-    const clock = new Clock();
-    const closeList = () => {
-        setBoxListOpen(false);
-    }
-    const fadeAnimation = fadeAnim(clock, shouldFade, closeList);
 
     if (boxes === null) {
         return null;
     }
 
 
-    let menuItems = boxes.map((box, index) => {
-        let isFirst = index === 0;
-        if (box.boxID === selectedBox?.boxID) {
-            return null;
-        }
-        let selectBox = () => SelectBox(box);
-        return (
-            <View key={index}>
-                {!isFirst && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#2d242b' }}></View>}
-                <Pressable
-                    style={styles.boxMenuItems}
-                    onPress={selectBox}>
-                    <Text style={{ fontSize: 20, fontWeight: 'bold', textTransform: 'capitalize' }}>{box.boxName}</Text>
-                </Pressable>
-            </View >
-        )
-
-    });
-
     let hasBoxes = boxes.length > 1;
-
-    let close = () => shouldFade.setValue(0);
-
-    const showBoxList = () => {
-        setBoxListOpen(true);
-    }
 
     return (
         <>
             <View style={styles.boxListTitleContainer}>
                 <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-                    <Pressable style={{ flexDirection: 'row', alignItems: 'center' }} onPress={hasBoxes ? showBoxList : undefined}>
+                    <Pressable style={{ flexDirection: 'row', alignItems: 'center' }} onPress={hasBoxes ? ShowBoxList : undefined}>
                         <View style={styles.boxListTitle}>
                             <Text style={styles.boxListTitleText}>
                                 {selectedBox ? selectedBox.boxName : "Add a Box!"}
@@ -132,19 +46,6 @@ const BoxListHeader: React.FC<Props> = ({ user, SelectBox }) => {
                     </Pressable>
                 </View>
             </View>
-            {
-                boxListOpen &&
-                <Animated.View style={[styles.boxMenu, { opacity: fadeAnimation }]}>
-                    <View style={{ padding: 15, backgroundColor: '#FEF4EA', borderRadius: 10, width: '75%', height: '50%' }}>
-                        <Pressable onPress={close}>
-                            <AntDesign name='close' size={25} color='#2d242b' style={{ marginVertical: 5 }} />
-                        </Pressable>
-                        <ScrollView>
-                            {menuItems}
-                        </ScrollView>
-                    </View>
-                </Animated.View>
-            }
         </>
     )
 }
@@ -166,27 +67,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 5,
         borderRadius: 5,
-        alignItems:'center',
-        justifyContent:'center',
-        flexDirection:'row'
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row'
     },
     boxListTitleText: {
         fontSize: 25,
         fontWeight: 'bold',
         color: '#2D242B',
-    },
-    firstBox: {
-        marginTop: 30
-    },
-    boxMenu: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10,
-        backgroundColor: 'rgba(45, 36, 43,0.4)',
-    },
-    boxMenuItems: {
-        paddingHorizontal: 5,
-        paddingVertical: 20,
-    },
+    }
 })

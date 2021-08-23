@@ -8,7 +8,7 @@ export type AddBoxViewParamList = {
     seenAs: undefined,
     submit: undefined,
     qrScreen: undefined,
-    BoxList: undefined
+    BoxMessages: undefined
 }
 
 

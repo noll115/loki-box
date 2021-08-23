@@ -3,7 +3,7 @@ import { IBox } from '../../../types/general'
 
 
 export type HomeViewTabParamList = {
-    BoxList: undefined,
+    BoxMessages: undefined,
     AddBox: undefined,
     SendMessage: {
         box: IBox

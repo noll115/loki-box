@@ -5,6 +5,10 @@ import Button from '../../Button';
 import { AddBoxViewStackProp, IContextProp, NewBoxContext } from '../addBoxView/addBoxViewNav';
 import { Feather } from '@expo/vector-icons';
 import { LoadingHeart } from '../../loadingHeart';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../../redux';
+import { IBox } from '../../../types/general';
+import { BlurView } from 'expo-blur';
 
 
 
@@ -15,6 +19,8 @@ const QRScanner: React.FC<AddBoxViewStackProp<'qrScreen'>> = ({ navigation }) =>
     const [scanned, setScanned] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [camSize, setCamSize] = useState(0);
+    const [error, setError] = useState<null | { msg: string }>(null);
+    const userBoxes = useSelector<RootState, IBox[] | null>(state => state.user.boxes);
     const { changeBoxInfo } = useContext(NewBoxContext) as IContextProp;
 
     const requestPermissions = async () => {
@@ -33,11 +39,21 @@ const QRScanner: React.FC<AddBoxViewStackProp<'qrScreen'>> = ({ navigation }) =>
 
     const handleBarCodeScan: BarCodeScannedCallback = ({ data: ID }) => {
         setScanned(true);
-        changeBoxInfo({ boxID: ID });
-        navigation.push('boxName');
+        let alreadyAddedBox = userBoxes?.some(box => box.boxID === ID);
+        if (!alreadyAddedBox) {
+            changeBoxInfo({ boxID: ID });
+            navigation.push('boxName');
+        } else {
+            setError({ msg: "You already have this box added!" });
+        }
+    }
+
+    const acceptError = () => {
+        setError(null);
+        setTimeout(() => setScanned(false),2000);
     }
     return (
-        <View style={styles.modal}>
+        <View style={styles.container}>
             <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
                 <Text style={{ fontSize: 30 }}>Scanning QR Code</Text>
             </View>
@@ -68,14 +84,43 @@ const QRScanner: React.FC<AddBoxViewStackProp<'qrScreen'>> = ({ navigation }) =>
                     </View >
                 }
             </View>
+            {error &&
+                <Pressable onPress={acceptError} style={styles.errorModalContainer}>
+                    <BlurView style={styles.errorBackground}>
+                        <View style={styles.errorModal}>
+                            <Text style={styles.errorModalText}>You already have this box added!</Text>
+                        </View>
+                    </BlurView>
+                </Pressable>
+            }
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    modal: {
+    container: {
         flex: 1,
         paddingTop: StatusBar.currentHeight,
+    },
+    errorBackground: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorModalContainer: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+    },
+    errorModal: {
+        padding: 10,
+        backgroundColor: '#FEF4EA',
+        borderRadius: 10
+    },
+    errorModalText: {
+        fontSize: 17
     }
 })
 

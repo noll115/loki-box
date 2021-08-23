@@ -1,90 +1,132 @@
-import Button from '../../Button';
-import { FontAwesome } from "@expo/vector-icons";
-import { StyleSheet, View } from 'react-native';
-import React, { useEffect, useState } from 'react'
-import { StackNavProp } from './homeViewNav';
-import { RootState, SelectBox } from '../../../redux';
-import { connect, ConnectedProps } from 'react-redux';
-import BoxListHeader from '../../BoxListHeader';
-import DrawerMenu from '../../DrawerMenu';
-import { MessageList } from '../../MessageList';
+import { AntDesign } from "@expo/vector-icons"
+import React, { FC, useEffect } from "react"
+import { Text } from "react-native"
+import { Pressable, ScrollView, StyleSheet, View } from "react-native"
+import Animated, { and, block, call, Clock, cond, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated"
+import { SelectBox, useAppDispatch, useAppSelector } from "../../../redux"
 
 
-const mapState = (state: RootState) => ({
-    user: state.user
-})
+function fadeAnim(clock: Clock, shouldFade: Animated.Value<0 | 1>, closeBoxList: () => void) {
+    const state = {
+        finished: new Animated.Value(0),
+        position: new Animated.Value(0),
+        time: new Animated.Value(0),
+        frameTime: new Animated.Value(0),
+    };
 
-const mapDispatch = {
-    SelectBox
+    const config = {
+        duration: 250,
+        toValue: new Animated.Value(0),
+        easing: EasingNode.inOut(EasingNode.ease),
+    };
+
+    return block([
+        cond(
+            and(eq(shouldFade, 1), neq(config.toValue, 1)),
+            [
+                set(config.toValue, 1),
+                set(state.finished, 0),
+                set(state.time, 0),
+                set(state.frameTime, 0),
+                startClock(clock)
+            ]
+        ),
+        cond(
+            and(eq(shouldFade, 0), neq(config.toValue, 0)),
+            [
+                set(config.toValue, 0),
+                set(state.finished, 0),
+                set(state.time, 0),
+                set(state.frameTime, 0),
+                startClock(clock)
+            ]
+        ),
+        timing(clock, state, config),
+        cond(state.finished,
+            [
+                stopClock(clock),
+                cond(
+                    not(config.toValue),
+                    call([], closeBoxList)
+                )
+            ],
+        ),
+        state.position
+    ])
 }
 
-const connector = connect(mapState, mapDispatch);
+type Props = {
+    boxListOpen: boolean,
+    HideBoxList: () => void
+}
 
-type Props = ConnectedProps<typeof connector> & StackNavProp<'BoxList'>
+export const BoxListView: FC<Props> = ({ boxListOpen, HideBoxList }) => {
 
+    const { boxes, selectedBox } = useAppSelector(state => state.user);
+    const dispatch = useAppDispatch();
+    const shouldFade = useValue<0 | 1>(0);
 
-const BoxListView: React.FC<Props> = ({ navigation, user }) => {
-    const [btnDisabled, setBtnDisabled] = useState(false);
-    let { boxes, messages, selectedBox } = user;
     useEffect(() => {
-        let removeListener = navigation.addListener('focus', () => {
-            setBtnDisabled(false);
-        });
-        return removeListener;
-    }, [])
+        if (boxListOpen)
+            shouldFade.setValue(1);
+    }, [boxListOpen]);
 
-    if (!boxes)
+
+    const clock = new Clock();
+
+    if (!boxListOpen)
         return null;
 
+    const fadeAnimation = fadeAnim(clock, shouldFade, HideBoxList);
 
-
-
-
-    let drawerMenuBtns = {
-        'Add a box':
-        {
-            fn: () => navigation.push('AddBox'),
-            icon: () => <FontAwesome name="plus" size={35} color="#171216" />
+    let menuItems = boxes!.map((box, index) => {
+        let isFirst = index === 0;
+        if (box.boxID === selectedBox?.boxID) {
+            return null;
         }
-    }
+        let selectBox = () => { dispatch(SelectBox(box)) };
+        return (
+            <View key={index}>
+                {!isFirst && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#2d242b' }}></View>}
+                <Pressable
+                    style={styles.boxMenuItems}
+                    onPress={selectBox}>
+                    <Text style={{ fontSize: 20, fontWeight: 'bold', textTransform: 'capitalize' }}>{box.boxName}</Text>
+                </Pressable>
+            </View >
+        )
+
+    });
+    let close = () => shouldFade.setValue(0);
 
     return (
-        <>
-            {selectedBox && <MessageList selectedBox={selectedBox} messages={messages} />}
-            <View style={styles.sendMsgBtn}>
-                {selectedBox &&
-                    <Button
-                        title={'Send a Message'}
-                        icon={<FontAwesome name="heart" size={20} color="#FEF4EA" />}
-                        isDisabled={btnDisabled}
-                        onPress={() => {
-                            setBtnDisabled(true);
-                            navigation.push('SendMessage', {
-                                box: selectedBox!
-                            })
-                        }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50, elevation: 4 }} />
-                }
+        <Animated.View style={[styles.boxMenu, { opacity: fadeAnimation }]} >
+            <View style={{ padding: 15, backgroundColor: '#FEF4EA', borderRadius: 10, width: '75%', height: '50%' }}>
+                <Pressable onPress={close}>
+                    <AntDesign name='close' size={25} color='#2d242b' style={{ marginVertical: 5 }} />
+                </Pressable>
+                <ScrollView>
+                    {menuItems}
+                </ScrollView>
             </View>
-            <BoxListHeader />
-            <DrawerMenu btns={drawerMenuBtns} />
-
-        </>
+        </Animated.View>
     )
 }
 
 
-export default connector(BoxListView)
-
 const styles = StyleSheet.create({
-    sendMsgBtn: {
-        flexDirection: 'row',
-        position: 'absolute',
-        width: '100%',
-        height: 70,
-        bottom: '4%',
-        paddingHorizontal: 10,
+    firstBox: {
+        marginTop: 30
+    },
+    boxMenu: {
+        ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 0
-    }
+        zIndex: 10,
+        backgroundColor: 'rgba(45, 36, 43,0.4)',
+    },
+    boxMenuItems: {
+        paddingHorizontal: 5,
+        paddingVertical: 20,
+    },
 })

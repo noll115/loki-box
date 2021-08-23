@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
         padding: 5,
         backgroundColor: '#FEF4EA',
         borderRadius: 10,
-        elevation: 15
     },
     drawerCloseContainer: {
         justifyContent: 'center',

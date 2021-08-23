@@ -6,7 +6,7 @@ import { ConnectSocket, RootState,Logout } from "../../../redux"
 import { SOCKET_STATE } from '../../../types/redux';
 import { HomeViewTabParamList } from './homeViewNav';
 import { createStackNavigator } from '@react-navigation/stack';
-import BoxListView from "./BoxListView"
+import BoxMessagesView from "./BoxMessagesView"
 import AddBoxView from '../addBoxView/AddBoxView';
 import MessageView from '../messageView';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -41,11 +41,11 @@ const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket,Logo
                     screenOptions={{
                         cardStyle: styles.container
                     }}
-                    initialRouteName="BoxList"
+                    initialRouteName="BoxMessages"
                 >
                     <Stack.Screen
-                        name='BoxList'
-                        component={BoxListView}
+                        name='BoxMessages'
+                        component={BoxMessagesView}
                     />
                     <Stack.Screen
                         name='AddBox'
