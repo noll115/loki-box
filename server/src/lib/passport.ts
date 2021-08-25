@@ -34,12 +34,13 @@ passport.use("box-jwt", new jwtStrategy(boxOptions, async (token: JWTBoxData, do
 }));
 
 passport.use("user-jwt", new jwtStrategy(userOptions, async (token: JWTUserData, done) => {
+    console.log(token)
     try {
         let user = await userModel.findById(token.user.id);
         if (user) {
             return done(null, user);
         }
-        done(null, false, { message: "Not found" });
+        done(null, false);
     } catch (err) {
         done(err)
     }
@@ -52,11 +53,11 @@ passport.use("login", new localStrategy({
     try {
         let user = await userModel.findOne({ email });
         if (!user) {
-            return done(null, false, { message: "User not found" });
+            return done(null, false);
         }
         let valid = await user.isValidPassword(password);
         if (!valid) {
-            return done(null, false, { message: "Wrong password" });
+            return done(null, false);
         }
         return done(null, user);
     } catch (err) {
@@ -67,22 +68,22 @@ passport.use("login", new localStrategy({
 
 function SocketVerifyUserJWT(socket: Socket, next: (err?: ExtendedError | undefined) => void) {
     let userSocket = <UserSocket>socket;
-    console.log('user');
-    
+    console.log(`socket id ${socket.id}`)
+    console.log('verify JWT Token');
     passport.authenticate('user-jwt', { session: false }, (err, user, info) => {
-        if (!user || err) return userSocket.emit('jwt_failed');
+        if (!user || err) return next(new Error('JWT_FAILED'));
 
         userSocket.user = user;
-        next();
+        return next();
     })(userSocket.request, {}, next)
 }
 
 
 function SocketVerifyBoxJWT(socket: Socket, next: (err?: ExtendedError | undefined) => void) {
     let boxSocket = <BoxSocket>socket;
-    
+
     passport.authenticate('box-jwt', { session: false }, (err, box, info) => {
-        if (!box || err) return boxSocket.emit('jwt_failed')
+        if (!box || err) return next(new Error('JWT_FAILED'));
 
         boxSocket.box = box;
         next();

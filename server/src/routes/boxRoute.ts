@@ -4,7 +4,7 @@ import * as jwt from "jsonwebtoken";
 import { BoxSocket, HttpException, JWTBoxData, NameSpaces, SocketsOnline } from "../types/general";
 import { SocketVerifyBoxJWT } from "../lib/passport";
 import { PassportStatic } from "passport";
-import messageModel from "../lib/mongoDB/message";
+import { messageModel } from "../lib/mongoDB/message";
 
 
 async function getNewMsg(id: string) {

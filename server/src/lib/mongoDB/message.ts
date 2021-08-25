@@ -54,6 +54,4 @@ export class MessageClass {
 
 }
 
-const messageModel = getModelForClass(MessageClass);
-
-export default messageModel;
+export const messageModel = getModelForClass(MessageClass);

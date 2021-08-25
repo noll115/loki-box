@@ -5,7 +5,7 @@ import { HttpException, INewBox, JWTUserData, NameSpaces, SocketsOnline, UserSoc
 import * as jwt from "jsonwebtoken";
 import adminRoute from "./adminRoute";
 import { SocketVerifyUserJWT } from "../lib/passport";
-import messageModel, { Message } from "../lib/mongoDB/message";
+import { messageModel, Message } from "../lib/mongoDB/message";
 import { PassportStatic } from "passport";
 
 export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: NameSpaces) => {
@@ -43,13 +43,18 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
 
         return res.send({ jwtToken });
     });
+    namespaces.user.use((socket, next) => {
+        console.log("Before",sockets);
+        next();
+    });
     namespaces.user.use(SocketVerifyUserJWT);
-
 
     namespaces.user.on('connection', async (socket: UserSocket) => {
         sockets[socket.user.id] = socket.id;
         console.log(socket.user.id);
-        
+        console.log("After",sockets);
+
+
         socket.emit('boxes', socket.user.boxes)
 
         socket.on("getBoxes", async (cb) => {
@@ -60,6 +65,7 @@ export default (passport: PassportStatic, sockets: SocketsOnline, namespaces: Na
         })
         socket.on('disconnect', () => {
             console.log(`${socket.user.email} disconnected`);
+            delete sockets[socket.user.id];
         })
 
         socket.on("registerBox", async (newBoxInfo: INewBox, cb: CallableFunction) => {
