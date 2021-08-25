@@ -1,28 +1,15 @@
 import { AntDesign } from "@expo/vector-icons";
-import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
-import React, { useEffect, useState } from 'react'
-import { RootState, SelectBox } from '../redux';
-import { connect, ConnectedProps } from 'react-redux';
-import Animated, { and, block, call, Clock, cond, debug, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useValue } from 'react-native-reanimated'
+import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React from 'react'
+import { useAppSelector } from '../redux';
 
 
 
+type Props = { ShowBoxList?: () => void };
 
 
-const mapState = (state: RootState) => ({
-    user: state.user,
-})
-
-const mapDispatch = {
-    SelectBox
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = { ShowBoxList: () => void } & ConnectedProps<typeof connector>
-
-
-const BoxListHeader: React.FC<Props> = ({ user, ShowBoxList }) => {
+const BoxListHeader: React.FC<Props> = ({ ShowBoxList }) => {
+    const user = useAppSelector(state => state.user);
     let { boxes, selectedBox } = user;
 
     if (boxes === null) {
@@ -51,7 +38,7 @@ const BoxListHeader: React.FC<Props> = ({ user, ShowBoxList }) => {
 }
 
 
-export default connector(BoxListHeader)
+export default BoxListHeader;
 
 const styles = StyleSheet.create({
     boxListTitleContainer: {

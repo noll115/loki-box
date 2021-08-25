@@ -1,6 +1,6 @@
 import { StatusBar, StyleSheet, Text, View } from 'react-native';
 import React, { useState } from 'react'
-import { RootState, RefreshMessages } from '../../../redux';
+import { RootState, RefreshMessages, useAppSelector, useAppDispatch } from '../../../redux';
 import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../homeView/homeViewNav';
 import { SketchCanvas } from './SketchCanvas';
@@ -10,20 +10,11 @@ import BoxListHeader from '../../BoxListHeader';
 
 let selectorSize = 50
 
-
-const mapState = (state: RootState) => ({
-    user: state.user,
-    socketState: state.socket
-})
-
-const mapDispatch = {
-    RefreshMessages
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector> & StackNavProp<'SendMessage'>
-const _MessageView: React.FC<Props> = ({ user, route, navigation, socketState: { socket }, RefreshMessages }) => {
+type Props = StackNavProp<'SendMessage'>
+export const MessageView: React.FC<Props> = ({ route, navigation }) => {
+    const socket = useAppSelector(state => state.socket.socket);
+    const user = useAppSelector(state => state.user);
+    const dispatch = useAppDispatch();
     let [sketchSubmitted, setSketchSubmitted] = useState(false);
     let { box } = route.params
 
@@ -32,13 +23,13 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation, socketState: {
     }
 
     const onDone = () => {
-        RefreshMessages().then(() => navigation.pop())
+        dispatch(RefreshMessages()).then(() => navigation.pop())
     }
 
 
     return (
         <View style={styles.container}>
-            { !sketchSubmitted &&
+            {!sketchSubmitted &&
                 <>
                     <BoxListHeader />
                     <View style={styles.body}>
@@ -46,13 +37,11 @@ const _MessageView: React.FC<Props> = ({ user, route, navigation, socketState: {
                     </View>
                 </>
             }
-            {   sketchSubmitted && <SubmittedScreen onPress={onDone} />}
+            {sketchSubmitted && <SubmittedScreen onPress={onDone} />}
         </View >
     )
 }
 
-const MessageView = connector(_MessageView);
-export default MessageView;
 
 const styles = StyleSheet.create({
     container: {

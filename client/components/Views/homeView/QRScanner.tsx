@@ -1,13 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Modal, StyleSheet, View, Text, StatusBar, Pressable } from 'react-native';
+import { StyleSheet, View, Text, StatusBar, Pressable } from 'react-native';
 import { BarCodeScannedCallback, BarCodeScanner } from 'expo-barcode-scanner';
 import Button from '../../Button';
 import { AddBoxViewStackProp, IContextProp, NewBoxContext } from '../addBoxView/addBoxViewNav';
 import { Feather } from '@expo/vector-icons';
 import { LoadingHeart } from '../../loadingHeart';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../../redux';
-import { IBox } from '../../../types/general';
+import { useAppSelector } from '../../../redux';
 import { BlurView } from 'expo-blur';
 
 
@@ -20,7 +18,7 @@ const QRScanner: React.FC<AddBoxViewStackProp<'qrScreen'>> = ({ navigation }) =>
     const [loaded, setLoaded] = useState(false);
     const [camSize, setCamSize] = useState(0);
     const [error, setError] = useState<null | { msg: string }>(null);
-    const userBoxes = useSelector<RootState, IBox[] | null>(state => state.user.boxes);
+    const userBoxes = useAppSelector(state => state.user.boxes);
     const { changeBoxInfo } = useContext(NewBoxContext) as IContextProp;
 
     const requestPermissions = async () => {
@@ -50,7 +48,7 @@ const QRScanner: React.FC<AddBoxViewStackProp<'qrScreen'>> = ({ navigation }) =>
 
     const acceptError = () => {
         setError(null);
-        setTimeout(() => setScanned(false),2000);
+        setTimeout(() => setScanned(false), 2000);
     }
     return (
         <View style={styles.container}>

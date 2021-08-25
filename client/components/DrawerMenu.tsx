@@ -3,18 +3,7 @@ import { AntDesign, Feather, FontAwesome } from "@expo/vector-icons";
 import { StatusBar, StyleSheet, Text, View, Dimensions, Pressable } from 'react-native';
 import Animated, { and, block, call, Clock, cond, debug, EasingNode, interpolateNode, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
 import React, { useEffect, useState } from 'react'
-import { RootState, Logout } from '../redux';
-import { connect, ConnectedProps } from 'react-redux';
-
-const mapState = (state: RootState) => ({
-    user: state.user
-})
-
-const mapDispatch = {
-    Logout
-}
-
-const connector = connect(mapState, mapDispatch);
+import { Logout, useAppDispatch } from '../redux';
 
 function slideAnim(clock: Clock, open: Animated.Value<0 | 1>, closeDrawer: () => void) {
     const state = {
@@ -68,13 +57,13 @@ function slideAnim(clock: Clock, open: Animated.Value<0 | 1>, closeDrawer: () =>
 
 
 
-type Props = { btns: Record<string, { fn: () => void, icon: React.FC }> } & ConnectedProps<typeof connector>
+type Props = { btns: Record<string, { fn: () => void, icon: React.FC }> };
 
 
 let windowWidth = Dimensions.get('window').width;
 
-const DrawerMenu: React.FC<Props> = ({ user, btns, Logout }) => {
-
+const DrawerMenu: React.FC<Props> = ({ btns }) => {
+    const dispatch = useAppDispatch();
     const clock = new Clock();
     const openVal = useValue<0 | 1>(0);
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -106,6 +95,9 @@ const DrawerMenu: React.FC<Props> = ({ user, btns, Logout }) => {
                 </View>
             </TouchableOpacity>
         )
+    }
+    const LogOutUser = () => {
+        dispatch(Logout());
     }
 
 
@@ -146,7 +138,7 @@ const DrawerMenu: React.FC<Props> = ({ user, btns, Logout }) => {
                             justifyContent: 'flex-end',
                             marginBottom: 25
                         }} >
-                            <Pressable onPress={Logout} style={styles.bodyBtnContainer}>
+                            <Pressable onPress={LogOutUser} style={styles.bodyBtnContainer}>
                                 <View style={styles.bodyBtn}>
                                     <FontAwesome name="sign-out" size={35} color="#2D242B" />
                                     <Text style={styles.bodyBtnText}>Sign out</Text>
@@ -160,7 +152,7 @@ const DrawerMenu: React.FC<Props> = ({ user, btns, Logout }) => {
     )
 }
 
-export default connector(DrawerMenu)
+export default DrawerMenu;
 
 const styles = StyleSheet.create({
     drawerContainer: {

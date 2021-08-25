@@ -47,7 +47,8 @@ const UserReducer = (state = INIT_USER_STATE, action: UserActions): UserState =>
                     ...state.messages,
                     [action.payload.box.boxID]: action.payload.messages
                 },
-                boxes: [...state.boxes!], selectedBox: state.selectedBox
+                boxes: [...state.boxes!],
+                selectedBox: action.payload.box
             }
         default:
             return state;

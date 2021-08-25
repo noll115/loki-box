@@ -88,7 +88,7 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
     }, [selectedBoxMessages]);
 
     let msgs = selectedBoxMessages.map(({ data: { lines, texts }, seen, sentTime }, index) => (
-        <View key={index} style={{ justifyContent: 'center', alignItems: 'center', marginBottom: 70 }}>
+        <View key={index} style={{ justifyContent: 'center', alignItems: 'center', paddingBottom: index === selectedBoxMessages.length - 1 ? 250 : 70, }}>
             <View style={{ width: 320, height: 240 }}>
                 <Svg style={{ backgroundColor: 'black', width: 320, height: 240, borderRadius: 10 }}>
                     {createPaths(lines)}
@@ -102,7 +102,7 @@ export const MessageList: React.FC<Props> = ({ selectedBox, messages }) => {
         </View>
     ))
     return (
-        <ScrollView style={{ paddingTop: 120, marginTop: StatusBar.currentHeight }} >
+        <ScrollView style={{ paddingTop: 80, marginTop: StatusBar.currentHeight }} >
             {msgs}
         </ScrollView>
     )

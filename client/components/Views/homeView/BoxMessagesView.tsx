@@ -3,30 +3,20 @@ import { FontAwesome } from "@expo/vector-icons";
 import { StyleSheet, View } from 'react-native';
 import React, { useEffect, useState } from 'react'
 import { StackNavProp } from './homeViewNav';
-import { RootState, SelectBox } from '../../../redux';
-import { connect, ConnectedProps } from 'react-redux';
+import { useAppSelector } from '../../../redux';
 import BoxListHeader from '../../BoxListHeader';
 import DrawerMenu from '../../DrawerMenu';
 import { MessageList } from '../../MessageList';
-import { BoxListView } from './BoxListView';
+import { BoxList } from './BoxList';
 
 
-const mapState = (state: RootState) => ({
-    user: state.user
-})
 
-const mapDispatch = {
-    SelectBox
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector> & StackNavProp<'BoxMessages'>
+type Props = StackNavProp<'BoxMessages'>
 
 
-const BoxMessagesView: React.FC<Props> = ({ navigation, user }) => {
+const BoxMessagesView: React.FC<Props> = ({ navigation }) => {
     const [btnDisabled, setBtnDisabled] = useState(false);
-    let { boxes, messages, selectedBox } = user;
+    let { boxes, messages, selectedBox } = useAppSelector(state => state.user);
     const [showBoxList, setShowBoxList] = useState(false);
 
     useEffect(() => {
@@ -44,7 +34,8 @@ const BoxMessagesView: React.FC<Props> = ({ navigation, user }) => {
         setShowBoxList(true);
     }
 
-    const HideBoxList = () => {
+    const hideBoxList = () => {
+        console.log('hiding')
         setShowBoxList(false);
     }
 
@@ -74,7 +65,7 @@ const BoxMessagesView: React.FC<Props> = ({ navigation, user }) => {
                 }
             </View>
             <BoxListHeader ShowBoxList={ShowBoxList} />
-            <BoxListView boxListOpen={showBoxList} HideBoxList={HideBoxList} />
+            <BoxList boxListOpen={showBoxList} hideBoxList={hideBoxList} />
             <DrawerMenu btns={drawerMenuBtns} />
 
         </>
@@ -82,7 +73,7 @@ const BoxMessagesView: React.FC<Props> = ({ navigation, user }) => {
 }
 
 
-export default connector(BoxMessagesView)
+export default BoxMessagesView;
 
 const styles = StyleSheet.create({
     sendMsgBtn: {

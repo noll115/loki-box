@@ -157,19 +157,18 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
             }
         })
         socket.on('connect_error', (err: Error) => {
-            console.error("connect error",err.message);
-            dispatch({
-                type: SocketActionTypes.SOCKET_DISCONNECTED,
-                payload: {
-                    error: err.message
-                }
-            })
+            console.error("connect error", err.message);
+            if (err.message === "JWT_FAILED") {
+                dispatch(Logout());
+            } else {
+                dispatch({
+                    type: SocketActionTypes.SOCKET_DISCONNECTED,
+                    payload: {
+                        error: err.message
+                    }
+                })
+            }
         });
-        socket.on('jwt_failed', () => {
-            console.log("JWT failed");
-
-            dispatch(Logout());
-        })
         socket.on('disconnect', () => {
             console.log("disconnected");
             dispatch({

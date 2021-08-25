@@ -1,36 +1,32 @@
 import React, { useEffect } from 'react'
 import { StyleSheet, Text, View } from 'react-native';
-import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../../../types/navigation';
-import { ConnectSocket, RootState,Logout } from "../../../redux"
+import { ConnectSocket, useAppSelector, useAppDispatch } from "../../../redux"
 import { SOCKET_STATE } from '../../../types/redux';
 import { HomeViewTabParamList } from './homeViewNav';
 import { createStackNavigator } from '@react-navigation/stack';
 import BoxMessagesView from "./BoxMessagesView"
 import AddBoxView from '../addBoxView/AddBoxView';
-import MessageView from '../messageView';
+import { MessageView } from '../messageView';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const mapState = (state: RootState) => ({
-    socketState: state.socket
-})
 
-const mapDispatch = {
-    ConnectSocket,
-    Logout
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector> & StackNavProp<'Home'>
+type Props = StackNavProp<'Home'>
 
 const Stack = createStackNavigator<HomeViewTabParamList>();
 
 
-const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket,Logout }) => {
+const HomeView: React.FC<Props> = () => {
+    const socketState = useAppSelector(state => state.socket);
+    const dispatch = useAppDispatch();
 
     useEffect(() => {
-        ConnectSocket()
+        dispatch(ConnectSocket());
+        return () => {
+            if (socketState.socket) {
+                socketState.socket.disconnect();
+            }
+        }
     }, [])
 
     switch (socketState.state) {
@@ -89,4 +85,4 @@ const styles = StyleSheet.create({
 
 })
 
-export default connector(HomeView);
+export default HomeView;

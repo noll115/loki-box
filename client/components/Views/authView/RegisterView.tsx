@@ -1,34 +1,26 @@
 import React from 'react'
 import { StyleSheet, Text, View, TextInput, Animated } from 'react-native';
-import { connect, ConnectedProps } from 'react-redux';
-import { Register, RootState } from '../../../redux'
+import { Register, useAppDispatch, useAppSelector } from '../../../redux'
 import { StackNavProp } from '../../../types/navigation';
 import UserForm from '../../UserForm';
 
 
-
-
-const mapState = (state: RootState) => ({
-    auth: state.auth
-})
-
-const mapDispatch = {
-    Register
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector> & StackNavProp<'Register'>
+type Props = StackNavProp<'Register'>
 
 
 
-const RegisterView = ({ navigation, auth, Register }: Props) => {
+const RegisterView: React.FC<Props> = () => {
+    const dispatch = useAppDispatch();
+    const auth = useAppSelector(state => state.auth);
 
+    const registerUser = (email: string, pass: string) => {
+        dispatch(Register(email, pass));
+    }
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Sign Up</Text>
-            <UserForm onSubmit={Register} error={auth.error} formType={'register'} />
+            <UserForm onSubmit={registerUser} error={auth.error} formType={'register'} />
         </View>
     );
 }
@@ -49,4 +41,4 @@ const styles = StyleSheet.create({
     }
 })
 
-export default connector(RegisterView);
+export default RegisterView;

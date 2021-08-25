@@ -1,7 +1,6 @@
 import React, { useRef } from 'react'
 import { StyleSheet, Text, View } from 'react-native';
-import { connect, ConnectedProps } from 'react-redux';
-import { RootState } from '../../../redux'
+import { useAppDispatch, useAppSelector } from '../../../redux'
 import Button from '../../Button';
 import { Login, RemoveError } from '../../../redux'
 import { StackNavProp } from '../../../types/navigation';
@@ -10,33 +9,27 @@ import { AUTH_STATE } from '../../../types/redux';
 
 
 
-const mapState = (state: RootState) => ({
-    auth: state.auth
-})
-
-const mapDispatch = {
-    Login, RemoveError
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector> & StackNavProp<'Login'>
+type Props = StackNavProp<'Login'>
 
 
 
-const LoginView = ({ navigation, Login, auth, RemoveError }: Props) => {
-
+const LoginView: React.FC<Props> = ({ navigation }) => {
+    const auth = useAppSelector(state => state.auth);
+    const dispatch = useAppDispatch();
     const form = useRef<UserFormMethods>(null);
     let loading = auth.state === AUTH_STATE.LOGGING_IN;
+    const LoginUser = (email: string, pass: string) => {
+        dispatch(Login(email, pass));
+    }
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Login</Text>
-            <UserForm ref={form} onSubmit={Login} error={auth.error} formType='login' disableSubmit={loading} />
+            <UserForm ref={form} onSubmit={LoginUser} error={auth.error} formType='login' disableSubmit={loading} />
             <Button
                 title='Sign Up'
                 onPress={() => {
                     form.current?.clearText();
-                    RemoveError();
+                    dispatch(RemoveError());
                     navigation.push('Register');
                 }}
                 btnStyle={styles.signUpBtn}
@@ -70,4 +63,4 @@ const styles = StyleSheet.create({
     }
 })
 
-export default connector(LoginView);
+export default LoginView;

@@ -2,7 +2,7 @@ import { createStackNavigator, StackNavigationOptions } from '@react-navigation/
 import React, { Reducer, useReducer, useState } from 'react'
 import { Easing, Animated } from 'react-native';
 import { connect, ConnectedProps } from 'react-redux';
-import { RootState } from "../../../redux"
+import { RootState, useAppSelector } from "../../../redux"
 import { IBox } from '../../../types/general';
 import { StackNavProp } from '../homeView/homeViewNav';
 import QRScanner from '../homeView/QRScanner';
@@ -56,22 +56,11 @@ const screenOpts: StackNavigationOptions = {
 }
 
 
+type Props = StackNavProp<'AddBox'>
 
 
-
-
-const mapState = (state: RootState) => ({
-    socketState: state.socket
-})
-
-const mapDispatch = {
-}
-
-const connector = connect(mapState, mapDispatch);
-type Props = ConnectedProps<typeof connector> & StackNavProp<'AddBox'>
-
-
-const AddBoxView: React.FC<Props> = ({ socketState: { socket } }) => {
+const AddBoxView: React.FC<Props> = () => {
+    const socket = useAppSelector(state=>state.socket.socket);
     const [newBoxInfo, changeBoxInfo] = useState<IBox>({ boxID: '', seenAs: '', boxName: '' });
     const changeInfo = (newBoxInfo: Partial<IBox>) => {
         changeBoxInfo(prevState => ({ ...prevState, ...newBoxInfo }));
@@ -111,4 +100,4 @@ const AddBoxView: React.FC<Props> = ({ socketState: { socket } }) => {
 
 
 
-export default connector(AddBoxView);
+export default AddBoxView;
