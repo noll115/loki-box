@@ -1,35 +1,32 @@
 import React, { useEffect } from 'react'
 import { StyleSheet, Text, View } from 'react-native';
-import { connect, ConnectedProps } from 'react-redux';
 import { StackNavProp } from '../../../types/navigation';
-import { ConnectSocket, RootState } from "../../../redux"
+import { ConnectSocket, useAppSelector, useAppDispatch } from "../../../redux"
 import { SOCKET_STATE } from '../../../types/redux';
 import { HomeViewTabParamList } from './homeViewNav';
 import { createStackNavigator } from '@react-navigation/stack';
-import BoxListView from "./BoxListView"
+import BoxMessagesView from "./BoxMessagesView"
 import AddBoxView from '../addBoxView/AddBoxView';
-import MessageView from '../messageView';
+import { MessageView } from '../messageView';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const mapState = (state: RootState) => ({
-    socketState: state.socket
-})
 
-const mapDispatch = {
-    ConnectSocket,
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector> & StackNavProp<'Home'>
+type Props = StackNavProp<'Home'>
 
 const Stack = createStackNavigator<HomeViewTabParamList>();
 
 
-const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) => {
+const HomeView: React.FC<Props> = () => {
+    const socketState = useAppSelector(state => state.socket);
+    const dispatch = useAppDispatch();
 
     useEffect(() => {
-        ConnectSocket()
+        dispatch(ConnectSocket());
+        return () => {
+            if (socketState.socket) {
+                socketState.socket.disconnect();
+            }
+        }
     }, [])
 
     switch (socketState.state) {
@@ -40,11 +37,11 @@ const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) =
                     screenOptions={{
                         cardStyle: styles.container
                     }}
-                    initialRouteName="BoxList"
-                    >
+                    initialRouteName="BoxMessages"
+                >
                     <Stack.Screen
-                        name='BoxList'
-                        component={BoxListView}
+                        name='BoxMessages'
+                        component={BoxMessagesView}
                     />
                     <Stack.Screen
                         name='AddBox'
@@ -58,13 +55,20 @@ const HomeView: React.FC<Props> = ({ navigation, socketState, ConnectSocket }) =
                 </Stack.Navigator>
             )
         case SOCKET_STATE.CONNECTING:
+            return (
+                <View>
+                    <Text>Connecting</Text>
+                </View>
+            )
         case SOCKET_STATE.OFFLINE:
-            return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialIcons size={60} name="error" color="black" />
-                <Text style={{ fontSize: 25, width: '50%', textAlign: 'center', fontWeight: 'bold' }}>
-                    {`Error connecting to server.\nTry again later`}
-                </Text>
-            </View>;
+            return (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialIcons size={60} name="error" color="black" />
+                    <Text style={{ fontSize: 25, width: '50%', textAlign: 'center', fontWeight: 'bold' }}>
+                        {`Error connecting to server.\nTry again later`}
+                    </Text>
+                </View>
+            );
     }
 
 }
@@ -81,4 +85,4 @@ const styles = StyleSheet.create({
 
 })
 
-export default connector(HomeView);
+export default HomeView;

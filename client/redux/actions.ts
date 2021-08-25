@@ -135,7 +135,7 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
 
             let hasPrevSelected = getState().user.selectedBox;
             if (boxes.length > 0 && !hasPrevSelected) {
-                socket.emit('getMsgHistory', boxes[0].box, res => {
+                socket.emit('getMsgHistory', boxes[0].boxID, res => {
                     if (res.status === 'ok') {
                         dispatch({
                             type: UserActionTypes.UPDATE_BOXES,
@@ -157,19 +157,18 @@ export const ConnectSocket = (): ThunkAction<void, RootState, string, SocketActi
             }
         })
         socket.on('connect_error', (err: Error) => {
-            console.log("connect error");
-            dispatch({
-                type: SocketActionTypes.SOCKET_DISCONNECTED,
-                payload: {
-                    error: err.message
-                }
-            })
+            console.error("connect error", err.message);
+            if (err.message === "JWT_FAILED") {
+                dispatch(Logout());
+            } else {
+                dispatch({
+                    type: SocketActionTypes.SOCKET_DISCONNECTED,
+                    payload: {
+                        error: err.message
+                    }
+                })
+            }
         });
-        socket.on('jwt_failed', () => {
-            console.log("JWT failed");
-
-            dispatch(Logout());
-        })
         socket.on('disconnect', () => {
             console.log("disconnected");
             dispatch({
@@ -193,7 +192,7 @@ export const RefreshMessages = (box?: IBox): ThunkAction<Promise<void>, RootStat
             let { socket } = socketState;
             let selectedBox = box || user.selectedBox;
             if (socket && selectedBox)
-                socket.emit('getMsgHistory', selectedBox.box, data => {
+                socket.emit('getMsgHistory', selectedBox.boxID, data => {
 
                     if (data.status === 'ok') {
                         console.log(data.msgs);

@@ -1,26 +1,13 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { connect, ConnectedProps } from 'react-redux';
-import { RootState, GetTokenInStorage } from '../redux';
+import { RootState, GetTokenInStorage, useAppDispatch, useAppSelector } from '../redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack'
 import { AUTH_STATE } from '../types/redux';
 import { LoginView, RegisterView, HomeView } from './Views';
 import { RootStackParamList } from '../types/navigation';
 import { useFonts } from 'expo-font';
-
-
-
-const mapState = (state: RootState) => ({
-    authState: state.auth.state
-})
-
-const mapDispatch = {
-    GetTokenInStorage
-}
-
-const connector = connect(mapState, mapDispatch);
-
 
 
 const SplashScreen: React.FC = () => {
@@ -57,17 +44,17 @@ function determineScreen(authState: AUTH_STATE): JSX.Element | null {
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-type Props = ConnectedProps<typeof connector>;
 
-
-const MainView: React.FC<Props> = ({ authState, GetTokenInStorage }) => {
+export const MainView: React.FC = () => {
+    const dispatch = useAppDispatch();
+    const authState = useAppSelector(state => state.auth.state);
     const [loaded] = useFonts({
         FreeSans: require('../assets/fonts/FreeSans-1Zge.otf')
     });
 
     useEffect(() => {
         if (loaded) {
-            GetTokenInStorage();
+            dispatch(GetTokenInStorage());
         }
     }, [loaded])
     return (
@@ -79,8 +66,3 @@ const MainView: React.FC<Props> = ({ authState, GetTokenInStorage }) => {
         </NavigationContainer>
     )
 }
-
-
-export default connector(MainView);
-
-

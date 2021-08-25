@@ -51,8 +51,6 @@ const scaleAnim = (clock: Clock) => {
 
 export const LoadingHeart: React.FC = () => {
     const clock = new Clock();
-    console.log('yo');
-    
     const scale = scaleAnim(clock);
     return (
         <Animated.View style={{

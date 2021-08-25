@@ -3,29 +3,22 @@ import { FontAwesome } from "@expo/vector-icons";
 import { StyleSheet, View } from 'react-native';
 import React, { useEffect, useState } from 'react'
 import { StackNavProp } from './homeViewNav';
-import { RootState, SelectBox } from '../../../redux';
-import { connect, ConnectedProps } from 'react-redux';
+import { useAppSelector } from '../../../redux';
 import BoxListHeader from '../../BoxListHeader';
 import DrawerMenu from '../../DrawerMenu';
 import { MessageList } from '../../MessageList';
+import { BoxList } from './BoxList';
 
 
-const mapState = (state: RootState) => ({
-    user: state.user
-})
 
-const mapDispatch = {
-    SelectBox
-}
-
-const connector = connect(mapState, mapDispatch);
-
-type Props = ConnectedProps<typeof connector> & StackNavProp<'BoxList'>
+type Props = StackNavProp<'BoxMessages'>
 
 
-const BoxListView: React.FC<Props> = ({ navigation, user }) => {
+const BoxMessagesView: React.FC<Props> = ({ navigation }) => {
     const [btnDisabled, setBtnDisabled] = useState(false);
-    let { boxes, messages, selectedBox } = user;
+    let { boxes, messages, selectedBox } = useAppSelector(state => state.user);
+    const [showBoxList, setShowBoxList] = useState(false);
+
     useEffect(() => {
         let removeListener = navigation.addListener('focus', () => {
             setBtnDisabled(false);
@@ -37,8 +30,14 @@ const BoxListView: React.FC<Props> = ({ navigation, user }) => {
         return null;
 
 
+    const ShowBoxList = () => {
+        setShowBoxList(true);
+    }
 
-
+    const hideBoxList = () => {
+        console.log('hiding')
+        setShowBoxList(false);
+    }
 
     let drawerMenuBtns = {
         'Add a box':
@@ -62,10 +61,11 @@ const BoxListView: React.FC<Props> = ({ navigation, user }) => {
                             navigation.push('SendMessage', {
                                 box: selectedBox!
                             })
-                        }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50, elevation: 4 }} />
+                        }} btnStyle={{ flex: 1, marginHorizontal: 20, borderRadius: 50 }} />
                 }
             </View>
-            <BoxListHeader />
+            <BoxListHeader ShowBoxList={ShowBoxList} />
+            <BoxList boxListOpen={showBoxList} hideBoxList={hideBoxList} />
             <DrawerMenu btns={drawerMenuBtns} />
 
         </>
@@ -73,7 +73,7 @@ const BoxListView: React.FC<Props> = ({ navigation, user }) => {
 }
 
 
-export default connector(BoxListView)
+export default BoxMessagesView;
 
 const styles = StyleSheet.create({
     sendMsgBtn: {
@@ -85,6 +85,5 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 0
     }
 })

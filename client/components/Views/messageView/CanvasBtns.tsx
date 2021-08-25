@@ -106,7 +106,6 @@ const Slider: React.FC<{ onValueChange(newVal: number): void, range: [number, nu
     let selectingState = useValue<number>(0);
     let transX = useValue<number>(0);
     let [currentValue, setCurrentValue] = useState(startVal);
-    console.log('ya');
 
     useEffect(() => {
         onValueChange(startVal);
@@ -127,8 +126,6 @@ const Slider: React.FC<{ onValueChange(newVal: number): void, range: [number, nu
     }
 
     let updateTextVal = ([x]: readonly number[]) => {
-        console.log(x);
-
         setCurrentValue(x);
     }
 

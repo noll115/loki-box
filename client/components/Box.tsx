@@ -11,7 +11,7 @@ type Props = {
 
 
 const Box: React.FC<Props> = ({ boxInfo, style }) => {
-    let { box, boxName, seenAs } = boxInfo;
+    let { boxID, boxName, seenAs } = boxInfo;
     return (
         <Pressable style={[styles.boxContainer, style]} >
             <View style={{ justifyContent: 'center', alignItems: 'center', flex: 0.2 }}>
