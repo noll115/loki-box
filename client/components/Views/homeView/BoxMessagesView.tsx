@@ -35,7 +35,6 @@ const BoxMessagesView: React.FC<Props> = ({ navigation }) => {
     }
 
     const hideBoxList = () => {
-        console.log('hiding')
         setShowBoxList(false);
     }
 

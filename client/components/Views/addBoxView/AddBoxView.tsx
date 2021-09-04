@@ -1,8 +1,7 @@
 import { createStackNavigator, StackNavigationOptions } from '@react-navigation/stack';
-import React, { Reducer, useReducer, useState } from 'react'
+import React, { useState } from 'react'
 import { Easing, Animated } from 'react-native';
-import { connect, ConnectedProps } from 'react-redux';
-import { RootState, useAppSelector } from "../../../redux"
+import { useAppSelector } from "../../../redux"
 import { IBox } from '../../../types/general';
 import { StackNavProp } from '../homeView/homeViewNav';
 import QRScanner from '../homeView/QRScanner';
@@ -60,7 +59,7 @@ type Props = StackNavProp<'AddBox'>
 
 
 const AddBoxView: React.FC<Props> = () => {
-    const socket = useAppSelector(state=>state.socket.socket);
+    const socket = useAppSelector(state => state.socket.socket);
     const [newBoxInfo, changeBoxInfo] = useState<IBox>({ boxID: '', seenAs: '', boxName: '' });
     const changeInfo = (newBoxInfo: Partial<IBox>) => {
         changeBoxInfo(prevState => ({ ...prevState, ...newBoxInfo }));

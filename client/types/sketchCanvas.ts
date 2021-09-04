@@ -13,7 +13,8 @@ export enum CanvasState {
 export interface Line {
     color: string
     points: number[]
-    lineWidth: number
+    lineWidth: number,
+    lineStr?: string;
 }
 
 export interface TextData {

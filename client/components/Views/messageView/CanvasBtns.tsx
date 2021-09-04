@@ -1,21 +1,14 @@
-import { TouchableOpacity, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
-    block,
-    call,
-    cond,
-    divide,
-    eq,
-    interpolateColors,
-    max,
-    min,
-    set,
-    sub,
-    round,
-    interpolateNode,
-    useValue,
+    useAnimatedGestureHandler,
+    useSharedValue,
+    runOnJS,
+    interpolateColor,
+    useAnimatedStyle,
+    useDerivedValue,
 } from 'react-native-reanimated';
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { StyleSheet, View, Text, Pressable, ViewStyle, StyleProp, TextStyle } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState } from "./../../../types/sketchCanvas";
@@ -27,60 +20,71 @@ const SELECTOR_SIZE = 30
 
 
 const ColorSlider: React.FC<{ setColor(col: string): void }> = ({ setColor }) => {
-    let width = useValue<number>(0);
-    let selectingState = useValue<number>(0);
-    let colors = [];
-    let ranges: number[] = [];
-    let transX = useValue(0);
+    let width = useSharedValue(0);
 
-    colors.push('hsl(0, 100%, 100%)')
-    for (let i = 0; i < 360; i += 360 / 6) {
-        colors.push(`hsl(${i}, 100%, 50%)`)
-    }
-    colors.push('hsl(360, 100%, 0%)')
-    for (let i = 0; i < colors.length; i++) {
-        ranges.push(Math.round(10 * (i / colors.length)) / 10)
-    }
+    let colors = useMemo(() => {
+        const c: string[] = [];
+        c.push('hsl(0, 100%, 100%)')
+        for (let i = 0; i < 360; i += 360 / 6) {
+            c.push(`hsl(${i}, 100%, 50%)`)
+        }
+        c.push('hsl(360, 100%, 0%)')
+        return c;
+    }, []);
+    let ranges = useMemo(() => {
+        const r: number[] = [];
+        for (let i = 0; i < colors.length; i++) {
+            r.push(Math.round(10 * (i / colors.length)) / 10)
+        }
+        return r;
+    }, []);
 
-    let selectorCol = interpolateColors(divide(transX, width), {
-        inputRange: ranges,
-        outputColorRange: colors,
-    })
+    let transX = useSharedValue(0);
 
-    let changeColor = ([col]: readonly number[]) => {
+    let percentage = useDerivedValue(() => {
+        return transX.value / width.value;
+    });
+
+    let changeColor = (col: number) => {
         setColor("#" + (col & 0x00FFFFFF).toString(16).padStart(6, '0'))
     }
-    let panHandler = Animated.event([
-        {
-            nativeEvent: ({ state, x }: any) => block([
-                set(transX, max(min(x, width), 0)),
-                cond(
-                    eq(state, State.BEGAN),
-                    set(selectingState, 1)
-                ),
-                cond(
-                    eq(state, State.END),
-                    [
-                        set(selectingState, 0),
-                        call([selectorCol], changeColor)
-                    ],
-                ),
 
-            ])
+    const handler = useAnimatedGestureHandler({
+        onStart: (event) => {
+            transX.value = Math.max(Math.min(event.x, width.value), 0)
         },
-    ]);
+        onActive: (event) => {
+            transX.value = Math.max(Math.min(event.x, width.value), 0)
+        },
+        onEnd: () => {
+            let newCol = interpolateColor(percentage.value, ranges, colors) as number;
+            runOnJS(changeColor)(newCol);
+        }
+    }, []);
 
+
+
+
+    const selectorAnimStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ translateX: transX.value - (SELECTOR_SIZE / 2) }]
+        }
+    });
+    const selectorInnerAnimStyle = useAnimatedStyle(() => {
+        return {
+            backgroundColor: interpolateColor(percentage.value, ranges, colors)
+        }
+    })
 
 
     return (
         <PanGestureHandler
-            onGestureEvent={panHandler}
-            onHandlerStateChange={panHandler}
+            onHandlerStateChange={handler}
         >
             <Animated.View style={canvasBtnStyle.slider}>
                 <View style={canvasBtnStyle.gradContainer}>
                     <LinearGradient
-                        onLayout={({ nativeEvent }) => width.setValue(nativeEvent.layout.width)}
+                        onLayout={({ nativeEvent }) => width.value = nativeEvent.layout.width}
                         style={canvasBtnStyle.grad}
                         colors={colors}
                         locations={ranges}
@@ -88,102 +92,14 @@ const ColorSlider: React.FC<{ setColor(col: string): void }> = ({ setColor }) =>
                         end={{ x: 1, y: 0 }}
                     />
                 </View>
-                <Animated.View style={[canvasBtnStyle.selector, {
-                    transform: [{
-                        translateX: sub(transX, SELECTOR_SIZE / 2),
-                    }],
-                }]} >
-                    <Animated.View style={[canvasBtnStyle.selectorInner, { backgroundColor: selectorCol as any }]} />
+                <Animated.View style={[canvasBtnStyle.selector, selectorAnimStyle]} >
+                    <Animated.View style={[canvasBtnStyle.selectorInner, selectorInnerAnimStyle]} />
                 </Animated.View>
             </Animated.View>
         </PanGestureHandler >
     )
 }
 
-const Slider: React.FC<{ onValueChange(newVal: number): void, range: [number, number], startVal: number }> = ({ onValueChange, range, startVal }) => {
-
-    let width = useValue<number>(100);
-    let selectingState = useValue<number>(0);
-    let transX = useValue<number>(0);
-    let [currentValue, setCurrentValue] = useState(startVal);
-
-    useEffect(() => {
-        onValueChange(startVal);
-    }, [])
-
-
-    let inputRange: number[] = [];
-    let outputRange: number[] = [];
-    let rangeLength = range[1] - range[0];
-    let inputPerc = 1 / rangeLength;
-    for (let i = 0; i <= rangeLength; i++) {
-        inputRange.push(inputPerc * i);
-        outputRange.push(range[0] + i);
-    }
-
-    let finalizeVal = ([x]: readonly number[]) => {
-        onValueChange(x);
-    }
-
-    let updateTextVal = ([x]: readonly number[]) => {
-        setCurrentValue(x);
-    }
-
-    let interpolateRange = (input: Animated.Node<number>) => round(interpolate(input, {
-        inputRange,
-        outputRange
-    }));
-
-
-    let panHandler = Animated.event([
-        {
-            nativeEvent: ({ state, x }: any) => block([
-                set(transX, max(min(x, width), 0)),
-                cond(
-                    eq(state, State.BEGAN),
-                    set(selectingState, 1)
-                ),
-                cond(
-                    eq(state, State.END),
-                    [
-                        set(selectingState, 0),
-                        call([interpolateRange(divide(transX, width))], finalizeVal)
-                    ],
-                ),
-                cond(
-                    eq(state, State.ACTIVE), [
-                    call([interpolateRange(divide(transX, width))], updateTextVal)
-                ]
-                )
-            ])
-        },
-    ]);
-    return (
-        <PanGestureHandler
-            onGestureEvent={panHandler}
-            onHandlerStateChange={panHandler}
-        >
-            <Animated.View
-                style={canvasBtnStyle.slider}
-            >
-                <Animated.View
-                    style={{ backgroundColor: 'black', width: '100%', height: 3 }}
-                    onLayout={({ nativeEvent }) => width.setValue(nativeEvent.layout.width)}
-                >
-                </Animated.View>
-                <Animated.View style={[canvasBtnStyle.selector, canvasBtnStyle.selectorSize, {
-                    transform: [{
-                        translateX: sub(transX, SELECTOR_SIZE / 2),
-                    }],
-                }]} >
-                    <Animated.View style={[canvasBtnStyle.selectorInner, canvasBtnStyle.selectorInnerSize]} >
-                        <Text>{currentValue}</Text>
-                    </Animated.View>
-                </Animated.View>
-
-            </Animated.View>
-        </PanGestureHandler >)
-}
 
 interface sketchBtnProps {
     iconName?: string,
@@ -202,8 +118,8 @@ const SketchButton: React.FC<sketchBtnProps> = ({ iconName, onPress, disabled, s
             disabled={disabled}
             style={[canvasBtnStyle.modeBtn, innerText !== undefined && canvasBtnStyle.modeBtnHasText, disabled && !selected && canvasBtnStyle.modeBtnDisabled, selected && canvasBtnStyle.modeBtnSelected, btnStyle]}
         >
-            { iconName && <MaterialCommunityIcons style={[canvasBtnStyle.modeBtnInner, selected && canvasBtnStyle.modeBtnInnerSelected]} name={iconName as any} />}
-            { !iconName && <Text style={[canvasBtnStyle.modeBtnInner, { fontSize: 18 }, textStyle]}>{innerText}</Text>}
+            {iconName && <MaterialCommunityIcons style={[canvasBtnStyle.modeBtnInner, selected && canvasBtnStyle.modeBtnInnerSelected]} name={iconName as any} />}
+            {!iconName && <Text style={[canvasBtnStyle.modeBtnInner, { fontSize: 18 }, textStyle]}>{innerText}</Text>}
         </Pressable >
     )
 }
@@ -325,8 +241,7 @@ interface canvasBtnProps {
     sketchDispatch: React.Dispatch<ReducerActions>
 }
 
-export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchState, sketchDispatch }) => {
-
+const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchState, sketchDispatch }) => {
 
     return (
         <View style={canvasBtnStyle.container}>
@@ -334,6 +249,10 @@ export const Canvasbtns: React.FC<canvasBtnProps> = ({ sketchState, sketchDispat
         </View>
     )
 }
+
+export default React.memo(Canvasbtns, (prevProps, nextProps) => {
+    return prevProps.sketchState.currentTool === nextProps.sketchState.currentTool && prevProps.sketchState.empty == nextProps.sketchState.empty;
+})
 
 
 const canvasBtnStyle = StyleSheet.create({

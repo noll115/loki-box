@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { connect, ConnectedProps } from 'react-redux';
 import { RootState, GetTokenInStorage, useAppDispatch, useAppSelector } from '../redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack'

@@ -195,7 +195,6 @@ export const RefreshMessages = (box?: IBox): ThunkAction<Promise<void>, RootStat
                 socket.emit('getMsgHistory', selectedBox.boxID, data => {
 
                     if (data.status === 'ok') {
-                        console.log(data.msgs);
                         dispatch({
                             type: UserActionTypes.SELECT_BOX,
                             payload: {

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useReducer, } from "react";
 import { StyleSheet, useWindowDimensions, View, Text } from "react-native";
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from "react-native-gesture-handler";
-import Animated, { and, block, call, Clock, clockRunning, cond, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useValue } from "react-native-reanimated";
+import Animated, { and, block, call, Clock, clockRunning, cond, EasingNode, eq, neq, not, runOnJS, set, startClock, stopClock, timing, useAnimatedGestureHandler, useAnimatedStyle, useDerivedValue, useSharedValue, useValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { Path, Svg, Text as SVGText } from 'react-native-svg'
-import { Canvasbtns } from "./CanvasBtns";
+import Canvasbtns from "./CanvasBtns";
 import CanvasTextInput from "./CanvasTextInput";
 import { SketchState, ReducerActions, CanvasActions, CanvasTools, CanvasState, Line, TextData } from "./../../../types/sketchCanvas";
 import { AntDesign } from "@expo/vector-icons";
@@ -77,95 +77,50 @@ let canvasReducer = (prevState: SketchState, action: ReducerActions): SketchStat
     }
 }
 
-function animateOpacity(clock: Clock) {
-    const state = {
-        finished: new Animated.Value(0),
-        position: new Animated.Value(0),
-        time: new Animated.Value(0),
-        frameTime: new Animated.Value(0),
-    };
 
-    const config = {
-        duration: new Animated.Value(250),
-        toValue: new Animated.Value(1),
-        easing: EasingNode.inOut(EasingNode.ease),
-    };
-
-    return block([
-        cond(
-            not(clockRunning(clock)),
-            startClock(clock)
-        ),
-        timing(clock, state, config),
-        cond(state.finished,
-            stopClock(clock)
-        ),
-        state.position
-    ])
-}
-
-function heartAnim(clock: Clock, animState: Animated.Value<number>) {
+const HeartLoader: React.FC<{ canvasState: CanvasState, onSubmit: () => void }> = ({ canvasState, onSubmit }) => {
 
 
-    const state = {
-        finished: new Animated.Value(0),
-        position: new Animated.Value(0),
-        time: new Animated.Value(0),
-        frameTime: new Animated.Value(0),
-    };
+    const heartScaleStyle = useAnimatedStyle(() => {
+        if (canvasState === CanvasState.SUBMITTED) {
+            return {
+                transform: [{
+                    scale: withTiming(
+                        2,
+                        undefined,
+                        isfinished => {
+                            isfinished && runOnJS(onSubmit)()
+                        })
+                }]
+            }
+        }
+        return {
+            transform: [{ scale: withRepeat(withSequence(withTiming(0), withTiming(1)), -1) }]
+        }
+    }, [canvasState]);
 
-    const config = {
-        duration: new Animated.Value(1000),
-        toValue: new Animated.Value(1),
-        easing: EasingNode.inOut(EasingNode.ease),
-    };
-    let shouldFillScreen = eq(animState, 1)
-    let pulse = block([
-        cond(
-            eq(config.toValue, 1),
-            set(config.toValue, 0),
-            set(config.toValue, 1),
-        ),
-        set(state.finished, 0),
-        set(state.frameTime, 0),
-        set(state.time, 0),
-    ]);
-    let fillScreen = block([
-        set(state.finished, 0),
-        set(state.time, 0),
-        set(state.frameTime, 0),
-        set(config.duration, 500),
-        set(config.toValue, 2),
-    ])
+    if (canvasState === CanvasState.EDITING) {
+        return null;
+    }
 
-    return block([
-        cond(
-            not(clockRunning(clock)),
-            startClock(clock)
-        ),
-        timing(clock, state, config),
-        cond(state.finished, [
-            cond(
-                not(shouldFillScreen),
-                pulse,
-                cond(
-                    neq(config.toValue, 2),
-                    fillScreen,
-                ),
-            )
-
-
-        ]),
-        state.position
-    ]);
-
+    return (
+        <Animated.View style={[style.loadingScreen, { opacity: withSequence(0, withTiming(1)) }]}>
+            <View style={{ height: '40%' }}>
+                <View style={{ flex: 2, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ color: '#FEF4EA', fontSize: 30, paddingBottom: 10, textAlign: 'center' }}>Sending...</Text>
+                </View>
+                <Animated.View style={[{ flex: 4 }, heartScaleStyle]}>
+                    <AntDesign name="heart" size={140} color="#C5261B" />
+                </Animated.View>
+            </View>
+        </Animated.View>
+    )
 }
 
 
 interface Props {
     width: number,
     height: number,
-
     onSubmit(): void,
     socket: Socket,
     box: IBox
@@ -175,13 +130,6 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
     let [state, dispatch] = useReducer(canvasReducer, INIT_STATE);
     const window = useWindowDimensions()
     let submitting = state.canvasState === CanvasState.SUBMITTING;
-
-    let animState = useValue<number>(0);
-    let clock1 = new Clock();
-    let clock2 = new Clock();
-    let scaleAnim = heartAnim(clock1, animState)
-    let opacityAnim = animateOpacity(clock2);
-
     useEffect(() => {
         let scale = (window.width - 20) / width;
         dispatch({ type: CanvasActions.SET_SCALE, scale })
@@ -198,10 +146,9 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
                 console.log(resp);
 
                 if (resp.status === 'ok') {
-                    return animState.setValue(1);
+                    return;
                 }
                 dispatch({ type: CanvasActions.SET_STATE, state: CanvasState.EDITING })
-                animState.setValue(0);
             })
         }
     }, [state.canvasState])
@@ -222,10 +169,11 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
 
 
     let startDraw = (x: number, y: number) => {
-        let newLine = {
+        let newLine: Line = {
             color: state.color,
             lineWidth: state.lineWidth,
-            points: [x, y]
+            points: [x, y],
+            lineStr: `M ${x} ${y}`
         }
         dispatch({ type: CanvasActions.SET_CURRENTLINE, line: newLine })
     }
@@ -234,7 +182,10 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
         y = Math.min(Math.max(0, y), height);
         let line = state.currentLine;
         if (line) {
-            dispatch({ type: CanvasActions.SET_CURRENTLINE, line: { ...line, points: [...line.points, x, y] } })
+            let points = [...line.points, x, y];
+            let lineStr = `${line.lineStr} ${bezierCommand(points.length - 2, points)}`
+            // let lineStr = `${line.lineStr} L ${x} ${y}`;
+            dispatch({ type: CanvasActions.SET_CURRENTLINE, line: { ...line, points, lineStr } })
         }
     }
 
@@ -245,53 +196,40 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
     }
 
 
-
-    let handlePanGesture = ({ nativeEvent }: PanGestureHandlerGestureEvent) => {
-        let { x, y } = nativeEvent;
-        x = Math.round(x);
-        y = Math.round(y);
-        switch (nativeEvent.state) {
-            case State.BEGAN:
-                if (state.currentTool === CanvasTools.DRAW) {
-                    startDraw(x, y)
-                } else {
-
-                }
-                break;
-            case State.ACTIVE:
-                if (state.currentTool === CanvasTools.DRAW) {
-                    activeDraw(x, y);
-                }
-                break;
-            case State.END:
-                if (state.currentTool === CanvasTools.DRAW) {
-                    endDraw();
-                } else {
-                    addText(x, y)
-                }
-                break;
+    const handlePanGesture = useAnimatedGestureHandler({
+        onStart: ({ x, y }) => {
+            x = Math.round(x);
+            y = Math.round(y);
+            if (state.currentTool === CanvasTools.DRAW) {
+                runOnJS(startDraw)(x, y);
+            }
+        },
+        onActive: ({ x, y }) => {
+            x = Math.round(x);
+            y = Math.round(y);
+            if (state.currentTool === CanvasTools.DRAW) {
+                runOnJS(activeDraw)(x, y);
+            }
+        },
+        onEnd: ({ x, y }) => {
+            x = Math.round(x);
+            y = Math.round(y);
+            if (state.currentTool === CanvasTools.DRAW) {
+                runOnJS(endDraw)();
+            } else {
+                runOnJS(addText)(x, y);
+            }
         }
-    }
+    })
 
+    // let paths = useMemo(() => state.lines.map((line, i) => createPath(line, i)), [state.lines])
 
-    let paths = useMemo(() => {
-        return state.lines.map((line, i) => createPath(line, i))
-    }, [state.lines])
+    const heartLoader = useMemo(() => <HeartLoader canvasState={state.canvasState} onSubmit={onSubmit} />, [state.canvasState, onSubmit]);
 
-    let canvasBtns = useMemo(() => <Canvasbtns sketchState={state} sketchDispatch={dispatch} />, [state.currentTool, state.empty])
-    let switchViews = () => {
-        onSubmit();
-    }
-
-    let heartScale = Animated.interpolateNode(scaleAnim, {
-        inputRange: [0, 1, 2],
-        outputRange: [1, 1.3, 20]
-    });
     return (
         <>
             <View style={{ transform: [{ scale: state.scale }], marginBottom: (state.scale * height) - height }}>
                 <PanGestureHandler maxPointers={1}
-                    onHandlerStateChange={submitting ? undefined : handlePanGesture}
                     onGestureEvent={submitting ? undefined : handlePanGesture}
                     enabled={!state.editingText}
                 >
@@ -304,8 +242,9 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
                                 borderRadius: 10
                             }}
                         >
-                            {paths}
-                            {state.currentLine && createPath(state.currentLine)}
+                            {/* {paths} */}
+                            {state.lines.map((line, i) => <SVGPath line={line} key={i} />)}
+                            {state.currentLine && <SVGPath line={state.currentLine} />}
                         </Svg>
                     </Animated.View>
                 </PanGestureHandler>
@@ -321,33 +260,50 @@ export const SketchCanvas: React.FC<Props> = ({ width, height, onSubmit, socket,
                 )
                 }
             </View >
-            {canvasBtns}
-            {
-                state.canvasState === CanvasState.SUBMITTING &&
-                <Animated.View style={[style.loadingScreen, { opacity: opacityAnim }]}>
-                    <View style={{ height: '40%' }}>
-                        <View style={{ flex: 2, justifyContent: 'center', alignItems: 'center' }}>
-                            <Text style={{ color: '#FEF4EA', fontSize: 30, paddingBottom: 10, textAlign: 'center' }}>Sending...</Text>
-                        </View>
-                        <Animated.View style={[{ flex: 4 }, {
-                            transform: [{
-                                scale: cond(
-                                    neq(scaleAnim, 2),
-                                    heartScale,
-                                    [
-                                        call([], switchViews),
-                                        heartScale
-                                    ],
-                                )
-                            }]
-                        }]}>
-                            <AntDesign name="heart" size={140} color="#C5261B" />
-                        </Animated.View>
-                    </View>
-                </Animated.View>
-            }
+            <Canvasbtns sketchState={state} sketchDispatch={dispatch} />
+            {heartLoader}
         </>
     );
+}
+const line = (pointA: number[], pointB: number[]) => {
+    const lengthX = pointB[0] - pointA[0]
+    const lengthY = pointB[1] - pointA[1]
+    return {
+        length: Math.sqrt(Math.pow(lengthX, 2) + Math.pow(lengthY, 2)),
+        angle: Math.atan2(lengthY, lengthX)
+    }
+}
+
+const controlPoint = (current: number[], previous: number[] | null, next: number[] | null, reverse: boolean) => {
+    // When 'current' is the first or last point of the array
+    // 'previous' or 'next' don't exist.
+    // Replace with 'current'
+    const p = previous || current
+    const n = next || current
+    // The smoothing ratio
+    const smoothing = 0.2
+    // Properties of the opposed-line
+    const o = line(p, n)
+    // If is end-control-point, add PI to the angle to go backward
+    const angle = o.angle + (reverse ? Math.PI : 0)
+    const length = o.length * smoothing
+    // The control point position is relative to the current point
+    const x = current[0] + Math.cos(angle) * length
+    const y = current[1] + Math.sin(angle) * length
+    return [Math.round(x * 100) / 100, Math.round(y * 100) / 100]
+}
+// i-2,i-1,i,i+1,
+//[ x , y ,x, y ,x,y,x,y]
+const bezierCommand = (i: number, a: number[]) => {
+    // start control point
+    const point = [a[i], a[i + 1]]; //point i
+    const point2 = [a[i - 2], a[i - 1]]; // point i-1
+    const point3 = a[i - 3] ? [a[i - 4], a[i - 3]] : null; // point i-2
+    const point4 = a[i + 2] ? [a[i + 2], a[i + 3]] : null; // point i-2
+    const [cpsX, cpsY] = controlPoint(point2, point3, point, false)
+    // end control point
+    const [cpeX, cpeY] = controlPoint(point, point2, point4, true);
+    return `C ${cpsX},${cpsY} ${cpeX},${cpeY} ${point[0]},${point[1]}`
 }
 
 
@@ -360,19 +316,18 @@ const style = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.3)'
     },
 })
-function createPath(line: Line, index?: number) {
-    let { points, lineWidth, color } = line;
-    let d = `M ${points[0]} ${points[1]}`;
-    for (let i = 2; i < points.length; i += 2) {
-        d += ` L ${points[i]} ${points[i + 1]}`;
-    }
+const SVGPath = React.memo<{ line: Line }>(({ line }) => {
+    let { points, lineWidth, color, lineStr } = line;
+    // let d = `M ${points[0]} ${points[1]}`;
+    // for (let i = 2; i < points.length; i += 2) {
+    //     d += bezierCommand(i, points);
+    // }
     return (
         <Path
-            key={index}
-            d={d}
+            d={lineStr}
             strokeWidth={lineWidth}
             strokeLinecap="round"
             stroke={color}
         />
     )
-}
+})

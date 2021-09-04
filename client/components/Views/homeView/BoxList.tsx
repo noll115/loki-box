@@ -2,58 +2,8 @@ import { AntDesign } from "@expo/vector-icons"
 import React, { FC, useEffect } from "react"
 import { Text } from "react-native"
 import { Pressable, ScrollView, StyleSheet, View } from "react-native"
-import Animated, { and, block, call, Clock, cond, EasingNode, eq, neq, not, set, startClock, stopClock, timing, useSharedValue, useValue } from "react-native-reanimated"
+import Animated, { Clock, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated"
 import { SelectBox, useAppDispatch, useAppSelector } from "../../../redux"
-
-
-function fadeAnim(clock: Clock, shouldFade: Animated.Value<0 | 1>, closeBoxList: () => void) {
-    const state = {
-        finished: new Animated.Value(0),
-        position: new Animated.Value(0),
-        time: new Animated.Value(0),
-        frameTime: new Animated.Value(0),
-    };
-
-    const config = {
-        duration: 250,
-        toValue: new Animated.Value(0),
-        easing: EasingNode.inOut(EasingNode.ease),
-    };
-
-    return block([
-        cond(
-            and(eq(shouldFade, 1), neq(config.toValue, 1)),
-            [
-                set(config.toValue, 1),
-                set(state.finished, 0),
-                set(state.time, 0),
-                set(state.frameTime, 0),
-                startClock(clock)
-            ]
-        ),
-        cond(
-            and(eq(shouldFade, 0), neq(config.toValue, 0)),
-            [
-                set(config.toValue, 0),
-                set(state.finished, 0),
-                set(state.time, 0),
-                set(state.frameTime, 0),
-                startClock(clock)
-            ]
-        ),
-        timing(clock, state, config),
-        cond(state.finished,
-            [
-                stopClock(clock),
-                cond(
-                    not(config.toValue),
-                    call([], closeBoxList)
-                )
-            ],
-        ),
-        state.position
-    ])
-}
 
 type Props = {
     boxListOpen: boolean,
@@ -64,29 +14,42 @@ export const BoxList: FC<Props> = ({ boxListOpen, hideBoxList }) => {
 
     const { boxes, selectedBox } = useAppSelector(state => state.user);
     const dispatch = useAppDispatch();
-    const shouldFade = useValue<0 | 1>(0);
+    const boxOpen = useSharedValue(false);
+
+    const fadeStyle = useAnimatedStyle(() => {
+        return {
+            opacity: withTiming(boxOpen.value ? 1 : 0, {
+                duration: 250
+            }, finished => {
+                if (finished) {
+                    console.log('boxopen', boxOpen.value);
+                    if (!boxOpen.value) {
+                        runOnJS(hideBoxList)()
+                    }
+                }
+            })
+        }
+    }, []);
+
 
     useEffect(() => {
         if (boxListOpen)
-            shouldFade.setValue(0);
+            boxOpen.value = true;
     }, [boxListOpen]);
-
 
     const clock = new Clock();
 
     if (!boxListOpen)
         return null;
 
-    const fadeAnimation = fadeAnim(clock, shouldFade, hideBoxList);
 
     let menuItems = boxes!.filter(box => box.boxID !== selectedBox?.boxID).map((box, index) => {
         let isFirst = index === 0;
         if (box.boxID === selectedBox?.boxID) {
             return null;
         }
-        console.log(isFirst, index)
         let selectBox = () => {
-            shouldFade.setValue(0);
+            boxOpen.value = false;
             dispatch(SelectBox(box))
         };
         return (
@@ -100,10 +63,10 @@ export const BoxList: FC<Props> = ({ boxListOpen, hideBoxList }) => {
         )
 
     });
-    let close = () => shouldFade.setValue(0);
+    let close = () => boxOpen.value = false;
 
     return (
-        <Animated.View style={[styles.boxMenu, { opacity: fadeAnimation }]} >
+        <Animated.View style={[styles.boxMenu, fadeStyle]} >
             <View style={{ padding: 15, backgroundColor: '#FEF4EA', borderRadius: 10, width: '75%', height: '50%' }}>
                 <Pressable onPress={close}>
                     <AntDesign name='close' size={25} color='#2d242b' style={{ marginVertical: 5 }} />
