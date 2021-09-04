@@ -1,5 +1,6 @@
 import { modelOptions, prop } from "@typegoose/typegoose";
 import mongoose from "mongoose";
+import { CreateMockData } from "./mock";
 export * from "./box";
 export * from "./user";
 
@@ -14,6 +15,9 @@ if (process.env.DB) {
 
     mongoose.connection.on('connected', function () {
         console.log('Mongoose default connection open to ' + process.env.DB);
+        if(process.env.MOCK){
+            CreateMockData();
+        }
     });
 
     mongoose.connection.on('error', function (err) {
